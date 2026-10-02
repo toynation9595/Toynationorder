@@ -61,7 +61,7 @@ export default function ImageManager({ product, cloudName, apiKey, onClose }: Pr
         }
         if (result?.event === "success") {
           const id = result.info.public_id;
-          queue.current = queue.current.then(() => addImage(product.code, id)).catch(() => setError("Could not save an image."));
+          queue.current = queue.current.then(() => addImage(product.barcode, id)).catch(() => setError("Could not save an image."));
         }
       }
     );
@@ -87,7 +87,7 @@ export default function ImageManager({ product, cloudName, apiKey, onClose }: Pr
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-brand-dark">{product.name}</h2>
-            <p className="text-xs text-gray-500">#{product.code}</p>
+            <p className="text-xs text-gray-500"><span className="font-mono">{product.barcode}</span> · #{product.code}</p>
           </div>
           <button onClick={onClose} className="text-2xl leading-none text-gray-400 hover:text-gray-700" aria-label="Close">×</button>
         </div>

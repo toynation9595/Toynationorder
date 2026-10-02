@@ -19,12 +19,12 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
   const [error, setError] = useState("");
   const [placing, start] = useTransition();
   const [placed, setPlaced] = useState(false);
-  const codesKey = lines.map((l) => l.code).sort().join("|");
+  const codesKey = lines.map((l) => l.barcode).sort().join("|");
 
   useEffect(() => {
     let alive = true;
     getCartProducts(codesKey ? codesKey.split("|") : []).then((ps) => {
-      if (alive) setPrices(new Map(ps.map((p) => [p.code, p])));
+      if (alive) setPrices(new Map(ps.map((p) => [p.barcode, p])));
     });
     return () => {
       alive = false;
@@ -40,7 +40,7 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
     );
   }
 
-  const total = lines.reduce((s, l) => s + (prices?.get(l.code)?.price ?? 0) * l.qty, 0);
+  const total = lines.reduce((s, l) => s + (prices?.get(l.barcode)?.price ?? 0) * l.qty, 0);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -100,11 +100,11 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
         ) : (
           <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">
             {lines.map((l) => {
-              const p = prices.get(l.code);
+              const p = prices.get(l.barcode);
               return (
-                <li key={l.code} className="flex justify-between gap-3">
+                <li key={l.barcode} className="flex justify-between gap-3">
                   <span className="min-w-0 text-gray-700">
-                    <span className="line-clamp-1">{p?.name ?? `#${l.code}`}</span>
+                    <span className="line-clamp-1">{p?.name ?? l.barcode}</span>
                     <span className="text-xs text-gray-500">{l.qty} × {p ? formatINR(p.price) : "—"}</span>
                   </span>
                   <span className="shrink-0 tabular-nums">{p ? formatINR(p.price * l.qty) : "—"}</span>

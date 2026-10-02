@@ -38,7 +38,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
         </div>
         <form className="flex gap-2 sm:w-96">
           {slug && <input type="hidden" name="category" value={slug} />}
-          <input name="q" defaultValue={q} type="search" placeholder="Search by name or code" className="input" />
+          <input name="q" defaultValue={q} type="search" placeholder="Search name, code or barcode" className="input" />
           <button className="btn-primary">Search</button>
         </form>
       </div>
@@ -75,7 +75,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
           {products.map((p) => (
-            <ProductCard key={p.code} p={p} />
+            <ProductCard key={p.barcode} p={p} />
           ))}
         </div>
       )}

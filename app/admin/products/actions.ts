@@ -11,32 +11,32 @@ function done() {
   revalidatePath("/", "layout");
 }
 
-export async function bulkAssignCategory(codes: string[], categoryId: number | null) {
+export async function bulkAssignCategory(barcodes: string[], categoryId: number | null) {
   await requireOwner();
-  if (!codes.length) return;
+  if (!barcodes.length) return;
   if (categoryId !== null) {
     const [c] = await db.select({ id: categories.id }).from(categories).where(eq(categories.id, categoryId));
     if (!c) return;
   }
-  await db.update(products).set({ categoryId }).where(inArray(products.code, codes));
+  await db.update(products).set({ categoryId }).where(inArray(products.barcode, barcodes));
   done();
 }
 
-export async function toggleVisible(code: string) {
+export async function toggleVisible(barcode: string) {
   await requireOwner();
-  await db.update(products).set({ isVisible: sql`not ${products.isVisible}` }).where(eq(products.code, code));
+  await db.update(products).set({ isVisible: sql`not ${products.isVisible}` }).where(eq(products.barcode, barcode));
   done();
 }
 
-export async function addImage(code: string, publicId: string) {
+export async function addImage(barcode: string, publicId: string) {
   await requireOwner();
   if (!publicId.startsWith(`${CLOUDINARY_FOLDER}/`)) return;
   const [{ n, max }] = await db
     .select({ n: sql<number>`count(*)::int`, max: sql<number>`coalesce(max(${productImages.sortOrder}), 0)::int` })
     .from(productImages)
-    .where(eq(productImages.productCode, code));
+    .where(eq(productImages.barcode, barcode));
   await db.insert(productImages).values({
-    productCode: code,
+    barcode,
     publicId,
     isPrimary: n === 0,
     sortOrder: max + 1,
@@ -49,7 +49,7 @@ export async function setPrimaryImage(id: number) {
   const [img] = await db.select().from(productImages).where(eq(productImages.id, id));
   if (!img) return;
   await db.transaction(async (tx) => {
-    await tx.update(productImages).set({ isPrimary: false }).where(eq(productImages.productCode, img.productCode));
+    await tx.update(productImages).set({ isPrimary: false }).where(eq(productImages.barcode, img.barcode));
     await tx.update(productImages).set({ isPrimary: true }).where(eq(productImages.id, id));
   });
   done();
@@ -69,14 +69,14 @@ export async function deleteImage(id: number): Promise<{ error?: string }> {
     const [next] = await db
       .select({ id: productImages.id })
       .from(productImages)
-      .where(eq(productImages.productCode, img.productCode))
+      .where(eq(productImages.barcode, img.barcode))
       .orderBy(asc(productImages.sortOrder))
       .limit(1);
     if (next) {
       await db
         .update(productImages)
         .set({ isPrimary: true })
-        .where(and(eq(productImages.id, next.id), eq(productImages.productCode, img.productCode)));
+        .where(and(eq(productImages.id, next.id), eq(productImages.barcode, img.barcode)));
     }
   }
   done();

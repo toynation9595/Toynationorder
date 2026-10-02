@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { and, asc, count, eq, exists, ilike, inArray, isNull, not, or, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, exists, inArray, isNull, not, type SQL } from "drizzle-orm";
 import { db, products, productImages, categories } from "@/lib/db";
+import { productSearch } from "@/lib/catalog";
 import ProductsTable, { type AdminProduct } from "./ProductsTable";
 
 export const metadata = { title: "Products – Toy Nation Admin" };
@@ -20,10 +21,10 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
   const page = Math.max(1, Number(sp.page) || 1);
 
   const hasImage = exists(
-    db.select({ x: productImages.id }).from(productImages).where(eq(productImages.productCode, products.code))
+    db.select({ x: productImages.id }).from(productImages).where(eq(productImages.barcode, products.barcode))
   );
   const conds: SQL[] = [];
-  if (q) conds.push(or(ilike(products.name, `%${q}%`), ilike(products.code, `%${q}%`))!);
+  if (q) conds.push(productSearch(q));
   if (f === "uncat") conds.push(isNull(products.categoryId));
   if (f === "noimg") conds.push(not(hasImage));
   if (f === "out") conds.push(eq(products.inStock, false));
@@ -33,6 +34,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
     db.select({ total: count() }).from(products).where(where),
     db
       .select({
+        barcode: products.barcode,
         code: products.code,
         name: products.name,
         unit: products.unit,
@@ -50,18 +52,18 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
     db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(asc(categories.sortOrder)),
   ]);
 
-  const codes = rows.map((r) => r.code);
-  const imgs = codes.length
+  const barcodes = rows.map((r) => r.barcode);
+  const imgs = barcodes.length
     ? await db
-        .select({ id: productImages.id, code: productImages.productCode, publicId: productImages.publicId, isPrimary: productImages.isPrimary })
+        .select({ id: productImages.id, barcode: productImages.barcode, publicId: productImages.publicId, isPrimary: productImages.isPrimary })
         .from(productImages)
-        .where(inArray(productImages.productCode, codes))
+        .where(inArray(productImages.barcode, barcodes))
         .orderBy(asc(productImages.sortOrder))
     : [];
 
   const list: AdminProduct[] = rows.map((r) => ({
     ...r,
-    images: imgs.filter((i) => i.code === r.code).map(({ id, publicId, isPrimary }) => ({ id, publicId, isPrimary })),
+    images: imgs.filter((i) => i.barcode === r.barcode).map(({ id, publicId, isPrimary }) => ({ id, publicId, isPrimary })),
   }));
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -79,7 +81,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
         <h1 className="text-2xl font-semibold text-brand-dark">Products</h1>
         <form className="flex w-full gap-2 sm:w-auto">
           {f && <input type="hidden" name="f" value={f} />}
-          <input name="q" defaultValue={q} placeholder="Search name or code" className="input sm:w-72" />
+          <input name="q" defaultValue={q} placeholder="Search name, code or barcode" className="input sm:w-72" />
           <button className="btn-primary">Search</button>
         </form>
       </div>

@@ -5,9 +5,9 @@ import { formatINR } from "@/lib/format";
 import Gallery from "./Gallery";
 import AddToCart from "@/components/AddToCart";
 
-export default async function ProductPage({ params }: PageProps<"/products/[code]">) {
-  const { code } = await params;
-  const data = await getProduct(decodeURIComponent(code));
+export default async function ProductPage({ params }: PageProps<"/products/[barcode]">) {
+  const { barcode } = await params;
+  const data = await getProduct(decodeURIComponent(barcode));
   if (!data) notFound();
   const { product: p, images, category, priceType } = data;
 
@@ -28,6 +28,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[code
 
         <div>
           <h1 className="text-2xl font-semibold leading-tight text-gray-900 md:text-3xl">{p.name}</h1>
+          <p className="mt-1 font-mono text-xs text-gray-400">{p.barcode}</p>
           <p className="mt-1 text-sm text-gray-500">Code #{p.code} · {p.unit}</p>
 
           <div className="mt-5 flex items-baseline gap-3">
@@ -50,7 +51,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[code
           </div>
 
           <div className="mt-6">
-            <AddToCart code={p.code} inStock={p.inStock} />
+            <AddToCart barcode={p.barcode} inStock={p.inStock} />
           </div>
 
           {priceType === "retail" && (

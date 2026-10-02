@@ -3,23 +3,23 @@
 import { useState } from "react";
 import { cart, parseQty } from "@/lib/cart";
 
-type Props = { code: string; inStock: boolean; compact?: boolean };
+type Props = { barcode: string; inStock: boolean; compact?: boolean };
 
-export default function AddToCart({ code, inStock, compact = false }: Props) {
+export default function AddToCart({ barcode, inStock, compact = false }: Props) {
   const [qty, setQty] = useState("1");
   const [added, setAdded] = useState(false);
   const n = parseQty(qty);
 
   function add() {
     if (!inStock || !n) return;
-    cart.add(code, n);
+    cart.add(barcode, n);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   }
 
   if (compact) {
     return (
-      <button onClick={() => { cart.add(code, 1); setAdded(true); setTimeout(() => setAdded(false), 1200); }}
+      <button onClick={() => { cart.add(barcode, 1); setAdded(true); setTimeout(() => setAdded(false), 1200); }}
         disabled={!inStock}
         className={`btn w-full py-2 ${added ? "bg-tn-teal text-white" : "bg-brand text-white hover:bg-brand-dark"} disabled:bg-gray-200 disabled:text-gray-500`}
       >

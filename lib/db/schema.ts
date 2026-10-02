@@ -41,7 +41,8 @@ export const products = pgTable(
   "products",
   {
     id: serial("id").primaryKey(),
-    code: text("code").notNull().unique(),
+    barcode: text("barcode").notNull().unique(),
+    code: text("code").notNull(),
     name: text("name").notNull(),
     unit: text("unit").notNull().default(""),
     retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).notNull(),
@@ -52,22 +53,22 @@ export const products = pgTable(
     lastReceived: date("last_received"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("products_category_idx").on(t.categoryId)]
+  (t) => [index("products_category_idx").on(t.categoryId), index("products_code_idx").on(t.code)]
 );
 
 export const productImages = pgTable(
   "product_images",
   {
     id: serial("id").primaryKey(),
-    productCode: text("product_code")
+    barcode: text("barcode")
       .notNull()
-      .references(() => products.code, { onDelete: "cascade", onUpdate: "cascade" }),
+      .references(() => products.barcode, { onDelete: "cascade", onUpdate: "cascade" }),
     publicId: text("public_id").notNull(),
     isPrimary: boolean("is_primary").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("product_images_code_idx").on(t.productCode)]
+  (t) => [index("product_images_barcode_idx").on(t.barcode)]
 );
 
 export const orders = pgTable(
@@ -105,6 +106,7 @@ export const orderItems = pgTable(
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
     productCode: text("product_code").notNull(),
+    barcode: text("barcode"), // null only for orders placed before the barcode switch
     productName: text("product_name").notNull(),
     unit: text("unit").notNull().default(""),
     qty: integer("qty").notNull(),

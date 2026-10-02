@@ -2,8 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
-/** Cart lives in localStorage as product code + qty only. Prices always come from the server. */
-export type CartLine = { code: string; qty: number };
+/** Cart lives in localStorage as product barcode + qty only. Prices always come from the server. */
+export type CartLine = { barcode: string; qty: number };
 
 const KEY = "tn_cart";
 const EVENT = "tn-cart";
@@ -23,8 +23,9 @@ function read(): CartLine[] {
     const parsed = JSON.parse(raw ?? "[]");
     if (Array.isArray(parsed)) {
       lines = parsed
-        .filter((l) => l && typeof l.code === "string" && Number.isInteger(l.qty) && l.qty > 0)
-        .map((l) => ({ code: l.code, qty: l.qty }));
+        // Entries without a barcode (old code-keyed carts) are ignored.
+        .filter((l) => l && typeof l.barcode === "string" && l.barcode && Number.isInteger(l.qty) && l.qty > 0)
+        .map((l) => ({ barcode: l.barcode, qty: l.qty }));
     }
   } catch {}
   cache = { raw, lines };
@@ -48,18 +49,18 @@ function subscribe(cb: () => void) {
 }
 
 export const cart = {
-  add(code: string, qty: number) {
+  add(barcode: string, qty: number) {
     const lines = [...read()];
-    const i = lines.findIndex((l) => l.code === code);
-    if (i >= 0) lines[i] = { code, qty: lines[i].qty + qty };
-    else lines.push({ code, qty });
+    const i = lines.findIndex((l) => l.barcode === barcode);
+    if (i >= 0) lines[i] = { barcode, qty: lines[i].qty + qty };
+    else lines.push({ barcode, qty });
     write(lines);
   },
-  setQty(code: string, qty: number) {
-    write(read().map((l) => (l.code === code ? { code, qty } : l)));
+  setQty(barcode: string, qty: number) {
+    write(read().map((l) => (l.barcode === barcode ? { barcode, qty } : l)));
   },
-  remove(code: string) {
-    write(read().filter((l) => l.code !== code));
+  remove(barcode: string) {
+    write(read().filter((l) => l.barcode !== barcode));
   },
   clear() {
     write([]);

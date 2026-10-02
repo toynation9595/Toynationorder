@@ -2,12 +2,12 @@
 
 import { db, orders, orderItems } from "@/lib/db";
 import { getCurrentUser, getPriceType } from "@/lib/auth";
-import { getProductsByCodes } from "@/lib/catalog";
+import { getProductsByBarcodes } from "@/lib/catalog";
 import { MOBILE_RE } from "@/lib/format";
 import { rememberPlacedOrder } from "@/lib/placed-orders";
 
 export type CheckoutInput = {
-  lines: { code: string; qty: number }[];
+  lines: { barcode: string; qty: number }[];
   name: string;
   shopName: string;
   mobile: string;
@@ -28,29 +28,29 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
   if (!MOBILE_RE.test(mobile)) return { error: "Please enter a valid 10-digit mobile number." };
   if (!city) return { error: "Please enter your city." };
 
-  // Merge duplicate codes; quantities must be positive integers.
-  const qtyByCode = new Map<string, number>();
+  // Merge duplicate barcodes; quantities must be positive integers.
+  const qtyByBarcode = new Map<string, number>();
   for (const l of Array.isArray(input?.lines) ? input.lines : []) {
-    const code = String(l?.code ?? "");
+    const barcode = String(l?.barcode ?? "");
     const qty = Number(l?.qty);
-    if (!code || !Number.isInteger(qty) || qty <= 0 || qty > 100000) return { error: "Invalid quantity in cart." };
-    qtyByCode.set(code, (qtyByCode.get(code) ?? 0) + qty);
+    if (!barcode || !Number.isInteger(qty) || qty <= 0 || qty > 100000) return { error: "Invalid quantity in cart." };
+    qtyByBarcode.set(barcode, (qtyByBarcode.get(barcode) ?? 0) + qty);
   }
-  if (qtyByCode.size === 0) return { error: "Your cart is empty." };
-  if (qtyByCode.size > 500) return { error: "Too many items in one order." };
+  if (qtyByBarcode.size === 0) return { error: "Your cart is empty." };
+  if (qtyByBarcode.size > 500) return { error: "Too many items in one order." };
 
   // Prices are recalculated on the server from the session; client prices are never used.
   const user = await getCurrentUser();
   const priceType = await getPriceType();
-  const found = new Map((await getProductsByCodes([...qtyByCode.keys()])).map((p) => [p.code, p]));
+  const found = new Map((await getProductsByBarcodes([...qtyByBarcode.keys()])).map((p) => [p.barcode, p]));
 
-  const items: { productCode: string; productName: string; unit: string; qty: number; rate: number; amount: number }[] = [];
+  const items: { productCode: string; barcode: string; productName: string; unit: string; qty: number; rate: number; amount: number }[] = [];
   const problems: string[] = [];
-  for (const [code, qty] of qtyByCode) {
-    const p = found.get(code);
-    if (!p) problems.push(`#${code} is no longer available`);
+  for (const [barcode, qty] of qtyByBarcode) {
+    const p = found.get(barcode);
+    if (!p) problems.push(`item ${barcode} is no longer available`);
     else if (!p.inStock) problems.push(`${p.name} is out of stock`);
-    else items.push({ productCode: p.code, productName: p.name, unit: p.unit, qty, rate: p.price, amount: r3(p.price * qty) });
+    else items.push({ productCode: p.code, barcode: p.barcode, productName: p.name, unit: p.unit, qty, rate: p.price, amount: r3(p.price * qty) });
   }
   if (problems.length) return { error: `Please update your cart: ${problems.join("; ")}.` };
 

@@ -16,7 +16,7 @@ export function ProductImagePlaceholder() {
 export default function ProductCard({ p }: { p: PublicProduct }) {
   return (
     <div className="card group flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(61,44,110,0.14)]">
-      <Link href={`/products/${encodeURIComponent(p.code)}`} className="relative block aspect-square bg-gray-50">
+      <Link href={`/products/${encodeURIComponent(p.barcode)}`} className="relative block aspect-square bg-gray-50">
         {p.image ? (
           <img src={cldUrl(p.image, 400)} alt={p.name} loading="lazy" className="h-full w-full object-cover" />
         ) : (
@@ -29,13 +29,14 @@ export default function ProductCard({ p }: { p: PublicProduct }) {
         )}
       </Link>
       <div className="flex flex-1 flex-col p-3">
-        <Link href={`/products/${encodeURIComponent(p.code)}`} className="line-clamp-2 text-sm font-medium leading-snug text-gray-900 hover:text-brand">
+        <Link href={`/products/${encodeURIComponent(p.barcode)}`} className="line-clamp-2 text-sm font-medium leading-snug text-gray-900 hover:text-brand">
           {p.name}
         </Link>
-        <span className="mt-0.5 text-xs text-gray-500">{p.unit}</span>
+        <span className="mt-0.5 font-mono text-[11px] text-gray-400">{p.barcode}</span>
+        <span className="text-xs text-gray-500">{p.unit}</span>
         <div className="mt-auto pt-2 font-heading text-lg font-semibold text-brand-dark">{formatINR(p.price)}</div>
         <div className="mt-2">
-          <AddToCart code={p.code} inStock={p.inStock} compact />
+          <AddToCart barcode={p.barcode} inStock={p.inStock} compact />
         </div>
       </div>
     </div>

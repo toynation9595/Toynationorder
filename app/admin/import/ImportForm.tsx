@@ -60,6 +60,7 @@ async function readFile(file: File): Promise<ErpRow[]> {
     stock: num(r[3]),
     price: num(r[12]),
     recDate: parseDate(r[15]),
+    barcode: str(r[23]),
   }));
 }
 
@@ -107,7 +108,7 @@ export default function ImportForm() {
     }
   }
 
-  const preview = rows?.filter((r) => r.code && r.price > 0).slice(0, 8) ?? [];
+  const preview = rows?.filter((r) => r.barcode && r.code && r.price > 0).slice(0, 8) ?? [];
 
   return (
     <div className="space-y-5">
@@ -121,7 +122,7 @@ export default function ImportForm() {
           className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-light file:px-4 file:py-2 file:font-semibold file:text-brand hover:file:bg-brand/15"
         />
         <p className="mt-2 text-xs text-gray-500">
-          First 4 rows are skipped. Reads Code, Product Name, Unit, Current Stock, Sales Price and Rec.Date only.
+          First 4 rows are skipped. Reads Code, Product Name, Unit, Current Stock, Sales Price, Rec.Date and Barcode only. Products are keyed by Barcode.
         </p>
 
         {rows && rows.length > 0 && (
@@ -133,6 +134,7 @@ export default function ImportForm() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
+                    <th className="px-3 py-2">Barcode</th>
                     <th className="px-3 py-2">Code</th>
                     <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Unit</th>
@@ -144,6 +146,7 @@ export default function ImportForm() {
                 <tbody>
                   {preview.map((r, i) => (
                     <tr key={i} className="border-t border-gray-100">
+                      <td className="px-3 py-1.5 font-mono">{r.barcode}</td>
                       <td className="px-3 py-1.5 font-mono">{r.code}</td>
                       <td className="px-3 py-1.5">{r.name}</td>
                       <td className="px-3 py-1.5">{r.unit}</td>

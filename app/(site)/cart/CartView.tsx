@@ -13,13 +13,13 @@ import { getCartProducts } from "./actions";
 export default function CartView({ priceLabel }: { priceLabel: string }) {
   const lines = useCart();
   const [prices, setPrices] = useState<Map<string, PublicProduct> | null>(null);
-  const codesKey = lines.map((l) => l.code).sort().join("|");
+  const codesKey = lines.map((l) => l.barcode).sort().join("|");
 
   useEffect(() => {
     let alive = true;
     const codes = codesKey ? codesKey.split("|") : [];
     getCartProducts(codes).then((ps) => {
-      if (alive) setPrices(new Map(ps.map((p) => [p.code, p])));
+      if (alive) setPrices(new Map(ps.map((p) => [p.barcode, p])));
     });
     return () => {
       alive = false;
@@ -37,7 +37,7 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
   if (!prices) return <div className="card p-10 text-center text-gray-500">Loading current prices…</div>;
 
   const rows = lines.map((l) => {
-    const p = prices.get(l.code);
+    const p = prices.get(l.barcode);
     return { line: l, p, ok: !!p && p.inStock };
   });
   const blocked = rows.some((r) => !r.ok);
@@ -47,24 +47,25 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="card divide-y divide-gray-100">
         {rows.map(({ line, p, ok }) => (
-          <div key={line.code} className="flex gap-3 p-3 sm:p-4">
+          <div key={line.barcode} className="flex gap-3 p-3 sm:p-4">
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-50">
               {p?.image ? <img src={cldUrl(p.image, 400)} alt="" className="h-full w-full object-cover" /> : <ProductImagePlaceholder />}
             </div>
             <div className="min-w-0 flex-1">
               {p ? (
-                <Link href={`/products/${encodeURIComponent(p.code)}`} className="line-clamp-2 text-sm font-medium text-gray-900 hover:text-brand">
+                <Link href={`/products/${encodeURIComponent(p.barcode)}`} className="line-clamp-2 text-sm font-medium text-gray-900 hover:text-brand">
                   {p.name}
                 </Link>
               ) : (
-                <span className="text-sm text-gray-500">Item #{line.code}</span>
+                <span className="font-mono text-sm text-gray-500">{line.barcode}</span>
               )}
+              {p && <div className="font-mono text-[11px] text-gray-400">{p.barcode}</div>}
               {p && <div className="text-xs text-gray-500">{p.unit} · {formatINR(p.price)}</div>}
               {!p && <div className="mt-1 text-xs font-medium text-red-600">No longer available — please remove</div>}
               {p && !p.inStock && <div className="mt-1 text-xs font-medium text-red-600">Out of stock — please remove</div>}
               <div className="mt-2 flex items-center gap-3">
-                <QtyInput value={line.qty} onChange={(q) => cart.setQty(line.code, q)} />
-                <button onClick={() => cart.remove(line.code)} className="text-xs font-medium text-gray-500 hover:text-red-600">Remove</button>
+                <QtyInput value={line.qty} onChange={(q) => cart.setQty(line.barcode, q)} />
+                <button onClick={() => cart.remove(line.barcode)} className="text-xs font-medium text-gray-500 hover:text-red-600">Remove</button>
               </div>
             </div>
             <div className="text-right text-sm font-semibold tabular-nums text-gray-900">

@@ -32,7 +32,7 @@ export function orderSummaryText(o: OrderRow, items: OrderItemRow[]): string {
     `Price: ${o.priceType === "wholesale" ? "Wholesale" : "Retail"}`,
     "",
     ...items.map(
-      (i, k) => `${k + 1}. ${i.productName} (#${i.productCode}) — ${i.qty} × ${formatINR(i.rate)} = ${formatINR(i.amount)}`
+      (i, k) => `${k + 1}. ${i.productName} (${i.barcode ?? `#${i.productCode}`}) — ${i.qty} × ${formatINR(i.rate)} = ${formatINR(i.amount)}`
     ),
     "",
     `*Total: ${formatINR(o.total)}*`,

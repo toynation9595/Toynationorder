@@ -9,6 +9,7 @@ import ImageManager from "./ImageManager";
 
 export type AdminImage = { id: number; publicId: string; isPrimary: boolean };
 export type AdminProduct = {
+  barcode: string;
   code: string;
   name: string;
   unit: string;
@@ -30,17 +31,17 @@ type Props = {
 export default function ProductsTable({ products, categories, cloudName, apiKey }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTo, setAssignTo] = useState("");
-  const [openCode, setOpenCode] = useState<string | null>(null);
+  const [openBarcode, setOpenBarcode] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const catName = new Map(categories.map((c) => [c.id, c.name]));
-  const allChecked = products.length > 0 && products.every((p) => selected.has(p.code));
-  const open = products.find((p) => p.code === openCode) ?? null;
+  const allChecked = products.length > 0 && products.every((p) => selected.has(p.barcode));
+  const open = products.find((p) => p.barcode === openBarcode) ?? null;
 
-  function toggle(code: string) {
+  function toggle(barcode: string) {
     const s = new Set(selected);
-    if (s.has(code)) s.delete(code);
-    else s.add(code);
+    if (s.has(barcode)) s.delete(barcode);
+    else s.add(barcode);
     setSelected(s);
   }
 
@@ -80,7 +81,7 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
                 <input
                   type="checkbox"
                   checked={allChecked}
-                  onChange={() => setSelected(allChecked ? new Set() : new Set(products.map((p) => p.code)))}
+                  onChange={() => setSelected(allChecked ? new Set() : new Set(products.map((p) => p.barcode)))}
                   aria-label="Select all"
                 />
               </th>
@@ -99,9 +100,9 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
             {products.map((p) => {
               const primary = p.images.find((i) => i.isPrimary) ?? p.images[0];
               return (
-                <tr key={p.code} className={selected.has(p.code) ? "bg-brand-light/60" : ""}>
+                <tr key={p.barcode} className={selected.has(p.barcode) ? "bg-brand-light/60" : ""}>
                   <td className="px-3 py-2">
-                    <input type="checkbox" checked={selected.has(p.code)} onChange={() => toggle(p.code)} aria-label={`Select ${p.name}`} />
+                    <input type="checkbox" checked={selected.has(p.barcode)} onChange={() => toggle(p.barcode)} aria-label={`Select ${p.name}`} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-3">
@@ -110,7 +111,7 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
                       </div>
                       <div className="min-w-0">
                         <div className="truncate font-medium text-gray-900">{p.name}</div>
-                        <div className="text-xs text-gray-500">#{p.code} · {p.unit}</div>
+                        <div className="text-xs text-gray-500"><span className="font-mono">{p.barcode}</span> · #{p.code} · {p.unit}</div>
                       </div>
                     </div>
                   </td>
@@ -122,13 +123,13 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
                     {Number(p.stockQty)}
                   </td>
                   <td className="px-3 py-2">
-                    <button onClick={() => setOpenCode(p.code)} className="rounded-lg bg-brand-light px-3 py-1 text-xs font-semibold text-brand hover:bg-brand/15">
+                    <button onClick={() => setOpenBarcode(p.barcode)} className="rounded-lg bg-brand-light px-3 py-1 text-xs font-semibold text-brand hover:bg-brand/15">
                       {p.images.length ? `${p.images.length} image${p.images.length > 1 ? "s" : ""}` : "+ Add"}
                     </button>
                   </td>
                   <td className="px-3 py-2">
                     <button
-                      onClick={() => start(() => toggleVisible(p.code))}
+                      onClick={() => start(() => toggleVisible(p.barcode))}
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
                         p.isVisible ? "bg-tn-teal/15 text-tn-teal" : "bg-gray-100 text-gray-500"
                       }`}
@@ -144,7 +145,7 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
       </div>
 
       {open && (
-        <ImageManager product={open} cloudName={cloudName} apiKey={apiKey} onClose={() => setOpenCode(null)} />
+        <ImageManager product={open} cloudName={cloudName} apiKey={apiKey} onClose={() => setOpenBarcode(null)} />
       )}
     </>
   );

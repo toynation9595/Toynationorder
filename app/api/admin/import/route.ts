@@ -20,6 +20,7 @@ function cleanRows(input: unknown): ErpRow[] | null {
       stock: Number(o.stock) || 0,
       price: Number(o.price) || 0,
       recDate: date,
+      barcode: String(o.barcode ?? ""),
     });
   }
   return out;
@@ -38,16 +39,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No valid product rows found in the file. Nothing was changed." }, { status: 400 });
   }
 
-  const codes = grouped.map((p) => p.code);
+  const barcodes = grouped.map((p) => p.barcode);
 
   const summary = await db.transaction(async (tx) => {
-    const existing = await tx.select({ code: products.code }).from(products);
-    const existingSet = new Set(existing.map((e) => e.code));
-    const created = codes.filter((c) => !existingSet.has(c)).length;
+    const existing = await tx
+      .select({ barcode: products.barcode, code: products.code, categoryId: products.categoryId })
+      .from(products);
+    const existingSet = new Set(existing.map((e) => e.barcode));
+    // New barcodes inherit the category of an existing product with the same code.
+    const categoryByCode = new Map<string, number>();
+    for (const e of existing) if (e.categoryId !== null && !categoryByCode.has(e.code)) categoryByCode.set(e.code, e.categoryId);
+    const created = barcodes.filter((b) => !existingSet.has(b)).length;
 
     const CHUNK = 500;
     for (let i = 0; i < grouped.length; i += CHUNK) {
       const chunk = grouped.slice(i, i + CHUNK).map((p) => ({
+        barcode: p.barcode,
         code: p.code,
         name: p.name,
         unit: p.unit,
@@ -55,14 +62,17 @@ export async function POST(req: Request) {
         stockQty: String(p.stockQty),
         inStock: p.stockQty > 0,
         lastReceived: p.lastReceived,
+        // Only applies on insert; the conflict update below never touches category_id.
+        categoryId: categoryByCode.get(p.code) ?? null,
         updatedAt: new Date(),
       }));
       await tx
         .insert(products)
         .values(chunk)
         .onConflictDoUpdate({
-          target: products.code,
+          target: products.barcode,
           set: {
+            code: sql`excluded.code`,
             name: sql`excluded.name`,
             unit: sql`excluded.unit`,
             retailPrice: sql`excluded.retail_price`,
@@ -77,7 +87,7 @@ export async function POST(req: Request) {
     const marked = await tx
       .update(products)
       .set({ inStock: false, updatedAt: new Date() })
-      .where(and(notInArray(products.code, codes), eq(products.inStock, true)))
+      .where(and(notInArray(products.barcode, barcodes), eq(products.inStock, true)))
       .returning({ id: products.id });
 
     return {

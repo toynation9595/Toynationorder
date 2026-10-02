@@ -1,6 +1,6 @@
 import { formatINR } from "@/lib/format";
 
-type Item = { id: number; productCode: string; productName: string; unit: string; qty: number; rate: string; amount: string };
+type Item = { id: number; productCode: string; barcode: string | null; productName: string; unit: string; qty: number; rate: string; amount: string };
 
 export default function OrderItemsTable({ items, total }: { items: Item[]; total: string }) {
   return (
@@ -19,7 +19,7 @@ export default function OrderItemsTable({ items, total }: { items: Item[]; total
             <tr key={i.id}>
               <td className="py-2 pr-3">
                 <div className="font-medium text-gray-900">{i.productName}</div>
-                <div className="text-xs text-gray-500">#{i.productCode} · {i.unit}</div>
+                <div className="text-xs text-gray-500">{i.barcode && <span className="font-mono">{i.barcode} · </span>}#{i.productCode} · {i.unit}</div>
               </td>
               <td className="px-3 py-2 text-right tabular-nums">{i.qty}</td>
               <td className="px-3 py-2 text-right tabular-nums">{formatINR(i.rate)}</td>

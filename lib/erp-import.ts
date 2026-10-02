@@ -6,6 +6,7 @@ export type ErpRow = {
   stock: number; // col 3
   price: number; // col 12
   recDate: string | null; // col 15, ISO yyyy-mm-dd
+  barcode: string; // col 23 — the product key
 };
 
 export type ImportSummary = {
@@ -17,6 +18,7 @@ export type ImportSummary = {
 };
 
 export type GroupedProduct = {
+  barcode: string;
   code: string;
   name: string;
   unit: string;
@@ -26,22 +28,22 @@ export type GroupedProduct = {
 };
 
 /**
- * Group batch rows by Code. stock = SUM of all batches; name/unit/price/date
+ * Group batch rows by Barcode. stock = SUM of all batches; code/name/unit/price/date
  * come from the row with the latest Rec.Date (tie → last row).
  */
 export function groupErpRows(rows: ErpRow[]): { products: GroupedProduct[]; skipped: number } {
   let skipped = 0;
   const map = new Map<string, { latest: ErpRow; stock: number }>();
   for (const r of rows) {
-    const code = r.code.trim();
-    if (!code || !(r.price > 0)) {
+    const barcode = r.barcode.trim();
+    if (!barcode || !r.code.trim() || !(r.price > 0)) {
       skipped++;
       continue;
     }
     const stock = Number.isFinite(r.stock) ? r.stock : 0;
-    const g = map.get(code);
+    const g = map.get(barcode);
     if (!g) {
-      map.set(code, { latest: r, stock });
+      map.set(barcode, { latest: r, stock });
       continue;
     }
     g.stock += stock;
@@ -49,10 +51,11 @@ export function groupErpRows(rows: ErpRow[]): { products: GroupedProduct[]; skip
     if ((r.recDate ?? "") >= (g.latest.recDate ?? "")) g.latest = r;
   }
   const products: GroupedProduct[] = [];
-  for (const [code, g] of map) {
+  for (const [barcode, g] of map) {
     products.push({
-      code,
-      name: g.latest.name.trim() || code,
+      barcode,
+      code: g.latest.code.trim(),
+      name: g.latest.name.trim() || barcode,
       unit: g.latest.unit.trim(),
       retailPrice: g.latest.price,
       stockQty: Math.round(g.stock * 1000) / 1000,

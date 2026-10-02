@@ -36,25 +36,26 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 ## Database (Drizzle schema)
 - users: id, mobile (unique, text), name, shop_name, city, pin_hash, role ('owner'|'retailer'), is_active (bool, default true), failed_attempts (int), locked_until (timestamp null), created_at
 - categories: id, name, slug (unique), sort_order, is_active, created_at
-- products: id, code (unique, TEXT – the ERP product Code), name, unit (text, as in ERP), retail_price (numeric 10,2), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
-- product_images: id, product_code (fk products.code), public_id, is_primary (bool), sort_order, created_at
+- products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), name, unit (text, as in ERP), retail_price (numeric 10,2), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
+- product_images: id, barcode (fk products.barcode), public_id, is_primary (bool), sort_order, created_at
 - orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'confirmed'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), created_at, updated_at
-- order_items: id, order_id, product_code, product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time
+- order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time
 
 Seed script: creates owner user from OWNER_MOBILE/OWNER_PIN.
 
 ## ERP stock import (owner only)
 Source: stock report .xlsx from the ERP (single sheet).
 - Skip the first 4 rows (company name, report date, 2-row header). Read columns BY POSITION (0-based):
-  0 Code, 1 Product Name, 2 Unit, 3 Current Stock, 12 Sales Price, 15 Rec.Date (format `06-Sep-26`)
+  0 Code, 1 Product Name, 2 Unit, 3 Current Stock, 12 Sales Price, 15 Rec.Date (format `06-Sep-26`), 23 Barcode
 - Ignore every other column (cost, purchase price, supplier, barcode, etc.) — never store them.
-- Skip rows where Code is empty or Sales Price <= 0.
-- One product has many rows (batches). Group by Code:
+- Skip rows where Barcode or Code is empty or Sales Price <= 0.
+- The product key is the Barcode. One barcode has many rows (batches). Group by Barcode:
   - stock_qty = SUM of Current Stock (can be negative)
   - in_stock = stock_qty > 0
-  - name, unit, retail_price, last_received = from the row with the LATEST Rec.Date (tie → last row)
-- Upsert by code: update name, unit, retail_price, stock_qty, in_stock, last_received ONLY. Never touch category_id, is_visible, or images.
-- Products in DB but not in the file → in_stock = false.
+  - code, name, unit, retail_price, last_received = from the row with the LATEST Rec.Date (tie → last row)
+- Upsert by barcode: update code, name, unit, retail_price, stock_qty, in_stock, last_received ONLY. Never touch category_id, is_visible, or images.
+- New barcodes inherit the category_id of an existing product with the same code, if any.
+- Barcodes in DB but not in the file → in_stock = false.
 - Show result summary: new / updated / marked out of stock / skipped rows.
 
 ## Design
@@ -63,11 +64,11 @@ Source: stock report .xlsx from the ERP (single sheet).
 - Palette (Tailwind theme tokens): primary purple #5B3FA0 (dark #3D2C6E), confetti accents orange #F07A2E, pink #E8488A, teal #2BB5BE, yellow #F5C518. Purple for header, buttons and hero; accents sparingly for badges, category tiles and small confetti dots.
 - Fonts via next/font: Fredoka (headings), Inter (body).
 - Rounded cards, soft shadows, generous spacing. Mobile-first (most users order on phones); works well on desktop too.
-- Product card: image (placeholder if none), name, unit, price, "Out of stock" badge (add button disabled when out of stock).
+- Product card: image (placeholder if none), name, barcode (small text under the name), unit, price, "Out of stock" badge (add button disabled when out of stock).
 - Prices shown as ₹ with Indian number formatting.
 
 ## Pages
-Public: `/` (hero with logo, About Toy Nation, category tiles, a few products) · `/products` (grid, category filter, search by name/code) · `/products/[code]` (image gallery, details, qty, add to cart) · `/cart` · `/checkout` · `/order-placed/[orderNo]` · `/login`
+Public: `/` (hero with logo, About Toy Nation, category tiles, a few products) · `/products` (grid, category filter, search by name/code/barcode) · `/products/[barcode]` (image gallery, details, qty, add to cart) · `/cart` · `/checkout` · `/order-placed/[orderNo]` · `/login`
 Retailer: `/my-orders` · `/my-orders/[orderNo]`
 Owner (`/admin/*`, role-guarded in middleware): orders · order detail · products · import · categories · retailers
 
@@ -79,10 +80,10 @@ Owner (`/admin/*`, role-guarded in middleware): orders · order detail · produc
 3. Admin layout + `/admin/import` (ERP import as specified above).
 4. `/admin/categories` (add / rename / reorder / activate).
 5. `/admin/products`: list with search, filter (uncategorised / no image / out of stock), multi-select → bulk assign category, visibility toggle, image upload per product via Cloudinary widget (multiple images, set primary, delete — also delete from Cloudinary).
-6. Public `/`, `/products`, `/products/[code]` with server-side pricing. Only show products where is_visible = true; only active categories.
+6. Public `/`, `/products`, `/products/[barcode]` with server-side pricing. Only show products where is_visible = true AND in_stock = true; only active categories. Admin shows all products.
 
 ### Day 2 – Ordering + accounts
-1. Cart in localStorage (stores product code + qty only). Cart page fetches current prices from server.
+1. Cart in localStorage (stores product barcode + qty only; entries without a barcode are ignored). Cart page fetches current prices from server.
 2. `/checkout`: guest enters name, shop name, mobile (10 digits), city; logged-in retailer sees their details prefilled. Server recalculates prices, creates order + items, clears cart.
 3. `/order-placed/[orderNo]`: confirmation + "Send on WhatsApp" button → `https://wa.me/<NEXT_PUBLIC_OWNER_WHATSAPP>?text=<encoded order summary>` (order no, customer, shop, city, mobile, items × qty × rate, total).
 4. `/admin/orders`: list newest first, filter by status, search by order no / mobile / shop. `/admin/orders/[id]`: full detail, status dropdown, notes, link to call/WhatsApp the customer.

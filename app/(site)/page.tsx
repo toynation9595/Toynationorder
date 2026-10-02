@@ -75,7 +75,7 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {featured.map((p) => (
-              <ProductCard key={p.code} p={p} />
+              <ProductCard key={p.barcode} p={p} />
             ))}
           </div>
         </section>
