@@ -36,15 +36,12 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
   }
   if (!prices) return <div className="card p-10 text-center text-gray-500">Loading current prices…</div>;
 
-  let total = 0;
-  let blocked = false;
   const rows = lines.map((l) => {
     const p = prices.get(l.code);
-    const ok = !!p && p.inStock;
-    if (!ok) blocked = true;
-    else total += p.price * l.qty;
-    return { line: l, p, ok };
+    return { line: l, p, ok: !!p && p.inStock };
   });
+  const blocked = rows.some((r) => !r.ok);
+  const total = rows.reduce((s, r) => s + (r.ok && r.p ? r.p.price * r.line.qty : 0), 0);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -99,8 +96,8 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
 }
 
 function QtyInput({ value, onChange }: { value: number; onChange: (q: number) => void }) {
-  const [v, setV] = useState(String(value));
-  useEffect(() => setV(String(value)), [value]);
+  const [draft, setDraft] = useState<string | null>(null);
+  const v = draft ?? String(value);
   return (
     <div className="flex items-center rounded-lg border border-gray-300 text-sm">
       <button onClick={() => value > 1 && onChange(value - 1)} className="px-2.5 py-1 text-gray-600" aria-label="Decrease">−</button>
@@ -109,11 +106,11 @@ function QtyInput({ value, onChange }: { value: number; onChange: (q: number) =>
         inputMode="numeric"
         onChange={(e) => {
           const s = e.target.value.replace(/\D/g, "");
-          setV(s);
+          setDraft(s);
           const n = parseQty(s);
           if (n) onChange(n);
         }}
-        onBlur={() => setV(String(value))}
+        onBlur={() => setDraft(null)}
         className="w-12 bg-transparent text-center font-semibold outline-none"
         aria-label="Quantity"
       />

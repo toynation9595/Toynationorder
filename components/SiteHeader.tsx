@@ -16,6 +16,9 @@ export default async function SiteHeader() {
         <nav className="ml-auto flex items-center gap-1 text-sm font-medium">
           <Link href="/products" className="rounded-lg px-3 py-2 hover:bg-white/10">Products</Link>
           <CartLink />
+          {user?.role === "retailer" && (
+            <Link href="/my-orders" className="hidden rounded-lg px-3 py-2 hover:bg-white/10 sm:block">My orders</Link>
+          )}
           {user?.role === "owner" && (
             <Link href="/admin/orders" className="rounded-lg px-3 py-2 hover:bg-white/10">Admin</Link>
           )}
@@ -32,6 +35,7 @@ export default async function SiteHeader() {
         <div className="bg-brand-dark text-center text-xs text-white/90">
           <div className="mx-auto max-w-7xl px-4 py-1">
             Hi {user.name.split(" ")[0]} · {user.shopName || "Retailer"} — you are seeing <b>wholesale prices</b>
+            <Link href="/my-orders" className="ml-2 underline sm:hidden">My orders</Link>
           </div>
         </div>
       )}
