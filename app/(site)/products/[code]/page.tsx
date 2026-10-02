@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getProduct } from "@/lib/catalog";
 import { formatINR } from "@/lib/format";
 import Gallery from "./Gallery";
+import AddToCart from "@/components/AddToCart";
 
 export default async function ProductPage({ params }: PageProps<"/products/[code]">) {
   const { code } = await params;
@@ -46,6 +47,10 @@ export default async function ProductPage({ params }: PageProps<"/products/[code
                 Out of stock
               </span>
             )}
+          </div>
+
+          <div className="mt-6">
+            <AddToCart code={p.code} inStock={p.inStock} />
           </div>
 
           {priceType === "retail" && (

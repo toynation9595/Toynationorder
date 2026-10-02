@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/login/actions";
 import LogoTile from "./LogoTile";
+import CartLink from "./CartLink";
 
 export default async function SiteHeader() {
   const user = await getCurrentUser();
@@ -14,6 +15,7 @@ export default async function SiteHeader() {
         </Link>
         <nav className="ml-auto flex items-center gap-1 text-sm font-medium">
           <Link href="/products" className="rounded-lg px-3 py-2 hover:bg-white/10">Products</Link>
+          <CartLink />
           {user?.role === "owner" && (
             <Link href="/admin/orders" className="rounded-lg px-3 py-2 hover:bg-white/10">Admin</Link>
           )}

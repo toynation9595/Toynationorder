@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db, products, productImages, categories } from "@/lib/db";
 import { getPriceType } from "@/lib/auth";
 import { priceFor, type PriceType } from "@/lib/pricing";
@@ -87,6 +87,17 @@ export async function featuredProducts(limit = 8): Promise<PublicProduct[]> {
     .where(and(listable, eq(products.inStock, true)))
     .orderBy(sql`${primaryImage} is null`, sql`${products.lastReceived} desc nulls last`, asc(products.name))
     .limit(limit);
+  return rows.map((r) => toPublic(r, pt));
+}
+
+export async function getProductsByCodes(codes: string[]): Promise<PublicProduct[]> {
+  if (codes.length === 0) return [];
+  const pt = await getPriceType();
+  const rows = await db
+    .select(baseCols)
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(and(listable, inArray(products.code, codes)));
   return rows.map((r) => toPublic(r, pt));
 }
 

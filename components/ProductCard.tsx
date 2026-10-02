@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatINR } from "@/lib/format";
 import { cldUrl } from "@/lib/images";
 import type { PublicProduct } from "@/lib/catalog";
+import AddToCart from "./AddToCart";
 
 export function ProductImagePlaceholder() {
   return (
@@ -33,6 +34,9 @@ export default function ProductCard({ p }: { p: PublicProduct }) {
         </Link>
         <span className="mt-0.5 text-xs text-gray-500">{p.unit}</span>
         <div className="mt-auto pt-2 font-heading text-lg font-semibold text-brand-dark">{formatINR(p.price)}</div>
+        <div className="mt-2">
+          <AddToCart code={p.code} inStock={p.inStock} compact />
+        </div>
       </div>
     </div>
   );
