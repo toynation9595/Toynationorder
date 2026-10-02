@@ -19,6 +19,7 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
   const [error, setError] = useState("");
   const [placing, start] = useTransition();
   const [placed, setPlaced] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const codesKey = lines.map((l) => l.barcode).sort().join("|");
 
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
     return () => {
       alive = false;
     };
-  }, [codesKey]);
+  }, [codesKey, refresh]);
 
   if (lines.length === 0 && !placed) {
     return (
@@ -41,6 +42,10 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
   }
 
   const total = lines.reduce((s, l) => s + (prices?.get(l.barcode)?.price ?? 0) * l.qty, 0);
+  const blocked = !!prices && lines.some((l) => {
+    const p = prices.get(l.barcode);
+    return !p || l.qty > p.available;
+  });
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,6 +61,7 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
       });
       if (res.error || !res.orderNo) {
         setError(res.error ?? "Could not place the order.");
+        setRefresh((n) => n + 1); // reload current availability
         return;
       }
       setPlaced(true);
@@ -106,6 +112,10 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
                   <span className="min-w-0 text-gray-700">
                     <span className="line-clamp-1">{p?.name ?? l.barcode}</span>
                     <span className="text-xs text-gray-500">{l.qty} × {p ? formatINR(p.price) : "—"}</span>
+                    {!p && <span className="block text-xs font-medium text-red-600">No longer available</span>}
+                    {p && l.qty > p.available && (
+                      <span className="block text-xs font-medium text-red-600">Only {p.available} available</span>
+                    )}
                   </span>
                   <span className="shrink-0 tabular-nums">{p ? formatINR(p.price * l.qty) : "—"}</span>
                 </li>
@@ -118,7 +128,12 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
           <span className="font-heading text-2xl font-semibold text-brand-dark">{formatINR(total)}</span>
         </div>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        <button disabled={placing || !prices} className="btn-primary mt-4 w-full py-3 text-base">
+        {blocked && (
+          <p className="mt-3 text-xs text-red-600">
+            Some items exceed available stock. <Link href="/cart" className="font-semibold underline">Update your cart</Link>.
+          </p>
+        )}
+        <button disabled={placing || !prices || blocked} className="btn-primary mt-4 w-full py-3 text-base">
           {placing ? "Placing order…" : "Place order"}
         </button>
         <Link href="/cart" className="mt-3 block text-center text-sm font-medium text-brand hover:underline">Edit cart</Link>

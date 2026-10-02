@@ -15,6 +15,8 @@ export type AdminProduct = {
   unit: string;
   retailPrice: string;
   stockQty: string;
+  reserved: number;
+  available: number;
   inStock: boolean;
   isVisible: boolean;
   categoryId: number | null;
@@ -74,7 +76,7 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
       )}
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
               <th className="w-10 px-3 py-3">
@@ -89,13 +91,15 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
               <th className="px-3 py-3">Category</th>
               <th className="px-3 py-3 text-right">Retail</th>
               <th className="px-3 py-3 text-right">Stock</th>
+              <th className="px-3 py-3 text-right">Reserved</th>
+              <th className="px-3 py-3 text-right">Available</th>
               <th className="px-3 py-3">Images</th>
               <th className="px-3 py-3">Visible</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {products.length === 0 && (
-              <tr><td colSpan={7} className="p-8 text-center text-gray-500">No products found.</td></tr>
+              <tr><td colSpan={9} className="p-8 text-center text-gray-500">No products found.</td></tr>
             )}
             {products.map((p) => {
               const primary = p.images.find((i) => i.isPrimary) ?? p.images[0];
@@ -121,6 +125,10 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
                   <td className="px-3 py-2 text-right tabular-nums">{formatINR(p.retailPrice)}</td>
                   <td className={`px-3 py-2 text-right tabular-nums ${p.inStock ? "" : "text-red-600"}`}>
                     {Number(p.stockQty)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-gray-600">{p.reserved || "—"}</td>
+                  <td className={`px-3 py-2 text-right font-semibold tabular-nums ${p.available > 0 ? "text-tn-teal" : "text-red-600"}`}>
+                    {p.available}
                   </td>
                   <td className="px-3 py-2">
                     <button onClick={() => setOpenBarcode(p.barcode)} className="rounded-lg bg-brand-light px-3 py-1 text-xs font-semibold text-brand hover:bg-brand/15">

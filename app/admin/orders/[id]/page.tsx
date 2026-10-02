@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ORDER_STATUSES } from "@/lib/db";
 import { getOrderById, waLink } from "@/lib/orders";
 import { formatDateTime, orderLabel } from "@/lib/format";
 import OrderItemsTable from "@/components/OrderItemsTable";
 import StatusBadge from "@/components/StatusBadge";
-import { updateOrder } from "../actions";
+import OrderStatusForm from "./OrderStatusForm";
 
 export default async function AdminOrderPage({ params }: PageProps<"/admin/orders/[id]">) {
   const { id } = await params;
@@ -49,22 +48,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
             </div>
           </div>
 
-          <form action={updateOrder} className="card space-y-3 p-5">
-            <input type="hidden" name="id" value={o.id} />
-            <div>
-              <label htmlFor="status" className="label">Status</label>
-              <select id="status" name="status" defaultValue={o.status} className="input capitalize">
-                {ORDER_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="notes" className="label">Notes</label>
-              <textarea id="notes" name="notes" rows={4} defaultValue={o.notes ?? ""} className="input" placeholder="Internal notes" />
-            </div>
-            <button className="btn-primary w-full">Save</button>
-          </form>
+          <OrderStatusForm id={o.id} status={o.status} notes={o.notes ?? ""} />
         </div>
       </div>
     </div>

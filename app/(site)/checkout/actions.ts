@@ -5,6 +5,7 @@ import { getCurrentUser, getPriceType } from "@/lib/auth";
 import { getProductsByBarcodes } from "@/lib/catalog";
 import { MOBILE_RE } from "@/lib/format";
 import { rememberPlacedOrder } from "@/lib/placed-orders";
+import { lockAvailability } from "@/lib/stock";
 
 export type CheckoutInput = {
   lines: { barcode: string; qty: number }[];
@@ -17,6 +18,12 @@ export type CheckoutInput = {
 export type CheckoutResult = { orderNo?: number; error?: string };
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
+
+class StockError extends Error {}
+
+function shortMessage(name: string, qty: number, available: number) {
+  return available > 0 ? `${name}: only ${available} available (you ordered ${qty})` : `${name} is out of stock`;
+}
 
 export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> {
   const name = String(input?.name ?? "").trim().slice(0, 100);
@@ -49,31 +56,45 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
   for (const [barcode, qty] of qtyByBarcode) {
     const p = found.get(barcode);
     if (!p) problems.push(`item ${barcode} is no longer available`);
-    else if (!p.inStock) problems.push(`${p.name} is out of stock`);
+    else if (qty > p.available) problems.push(shortMessage(p.name, qty, p.available));
     else items.push({ productCode: p.code, barcode: p.barcode, productName: p.name, unit: p.unit, qty, rate: p.price, amount: r3(p.price * qty) });
   }
   if (problems.length) return { error: `Please update your cart: ${problems.join("; ")}.` };
 
   const total = r3(items.reduce((s, i) => s + i.amount, 0));
 
-  const orderNo = await db.transaction(async (tx) => {
-    const [o] = await tx
-      .insert(orders)
-      .values({
-        userId: user?.role === "retailer" ? user.id : null,
-        customerName: name,
-        shopName,
-        mobile,
-        city,
-        priceType,
-        total: String(total),
-      })
-      .returning({ id: orders.id, orderNo: orders.orderNo });
-    await tx.insert(orderItems).values(
-      items.map((i) => ({ ...i, orderId: o.id, rate: String(i.rate), amount: String(i.amount) }))
-    );
-    return o.orderNo;
-  });
+  let orderNo: number;
+  try {
+    orderNo = await db.transaction(async (tx) => {
+      // Authoritative re-check with the product rows locked.
+      const avail = await lockAvailability(tx, items.map((i) => i.barcode));
+      const short = items.filter((i) => i.qty > (avail.get(i.barcode)?.available ?? 0));
+      if (short.length) {
+        throw new StockError(
+          short.map((i) => shortMessage(i.productName, i.qty, avail.get(i.barcode)?.available ?? 0)).join("; ")
+        );
+      }
+      const [o] = await tx
+        .insert(orders)
+        .values({
+          userId: user?.role === "retailer" ? user.id : null,
+          customerName: name,
+          shopName,
+          mobile,
+          city,
+          priceType,
+          total: String(total),
+        })
+        .returning({ id: orders.id, orderNo: orders.orderNo });
+      await tx.insert(orderItems).values(
+        items.map((i) => ({ ...i, orderId: o.id, rate: String(i.rate), amount: String(i.amount) }))
+      );
+      return o.orderNo;
+    });
+  } catch (e) {
+    if (e instanceof StockError) return { error: `Please update your cart: ${e.message}.` };
+    throw e;
+  }
 
   await rememberPlacedOrder(orderNo);
   return { orderNo };

@@ -3,6 +3,7 @@ import { and, eq, notInArray, sql } from "drizzle-orm";
 import { db, products } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { groupErpRows, type ErpRow, type ImportSummary } from "@/lib/erp-import";
+import { markImported } from "@/lib/stock";
 
 export const maxDuration = 60;
 
@@ -89,6 +90,8 @@ export async function POST(req: Request) {
       .set({ inStock: false, updatedAt: new Date() })
       .where(and(notInArray(products.barcode, barcodes), eq(products.inStock, true)))
       .returning({ id: products.id });
+
+    await markImported(tx);
 
     return {
       products: grouped.length,

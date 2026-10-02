@@ -36,7 +36,7 @@ export default function ProductCard({ p }: { p: PublicProduct }) {
         <span className="text-xs text-gray-500">{p.unit}</span>
         <div className="mt-auto pt-2 font-heading text-lg font-semibold text-brand-dark">{formatINR(p.price)}</div>
         <div className="mt-2">
-          <AddToCart barcode={p.barcode} inStock={p.inStock} compact />
+          <AddToCart barcode={p.barcode} available={p.available} compact />
         </div>
       </div>
     </div>

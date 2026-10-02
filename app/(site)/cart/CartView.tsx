@@ -38,7 +38,7 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
 
   const rows = lines.map((l) => {
     const p = prices.get(l.barcode);
-    return { line: l, p, ok: !!p && p.inStock };
+    return { line: l, p, ok: !!p && l.qty <= p.available };
   });
   const blocked = rows.some((r) => !r.ok);
   const total = rows.reduce((s, r) => s + (r.ok && r.p ? r.p.price * r.line.qty : 0), 0);
@@ -62,9 +62,14 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
               {p && <div className="font-mono text-[11px] text-gray-400">{p.barcode}</div>}
               {p && <div className="text-xs text-gray-500">{p.unit} · {formatINR(p.price)}</div>}
               {!p && <div className="mt-1 text-xs font-medium text-red-600">No longer available — please remove</div>}
-              {p && !p.inStock && <div className="mt-1 text-xs font-medium text-red-600">Out of stock — please remove</div>}
+              {p && line.qty > p.available && (
+                <div className="mt-1 text-xs font-medium text-red-600">
+                  Only {p.available} available —{" "}
+                  <button onClick={() => cart.setQty(line.barcode, p.available)} className="underline">set to {p.available}</button>
+                </div>
+              )}
               <div className="mt-2 flex items-center gap-3">
-                <QtyInput value={line.qty} onChange={(q) => cart.setQty(line.barcode, q)} />
+                <QtyInput value={line.qty} max={p?.available} onChange={(q) => cart.setQty(line.barcode, q)} />
                 <button onClick={() => cart.remove(line.barcode)} className="text-xs font-medium text-gray-500 hover:text-red-600">Remove</button>
               </div>
             </div>
@@ -84,7 +89,7 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
           <span className="font-medium">Total</span>
           <span className="font-heading text-2xl font-semibold text-brand-dark">{formatINR(total)}</span>
         </div>
-        {blocked && <p className="mt-3 text-xs text-red-600">Remove unavailable items to continue.</p>}
+        {blocked && <p className="mt-3 text-xs text-red-600">Fix the highlighted items to continue.</p>}
         {blocked ? (
           <button disabled className="btn-primary mt-4 w-full">Proceed to checkout</button>
         ) : (
@@ -96,7 +101,7 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
   );
 }
 
-function QtyInput({ value, onChange }: { value: number; onChange: (q: number) => void }) {
+function QtyInput({ value, max, onChange }: { value: number; max?: number; onChange: (q: number) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const v = draft ?? String(value);
   return (
@@ -109,13 +114,14 @@ function QtyInput({ value, onChange }: { value: number; onChange: (q: number) =>
           const s = e.target.value.replace(/\D/g, "");
           setDraft(s);
           const n = parseQty(s);
-          if (n) onChange(n);
+          if (n) onChange(max !== undefined && max > 0 ? Math.min(n, max) : n);
         }}
         onBlur={() => setDraft(null)}
         className="w-12 bg-transparent text-center font-semibold outline-none"
         aria-label="Quantity"
       />
-      <button onClick={() => onChange(value + 1)} className="px-2.5 py-1 text-gray-600" aria-label="Increase">+</button>
+      <button onClick={() => (max === undefined || value < max) && onChange(value + 1)} disabled={max !== undefined && value >= max}
+        className="px-2.5 py-1 text-gray-600 disabled:opacity-30" aria-label="Increase">+</button>
     </div>
   );
 }

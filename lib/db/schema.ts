@@ -92,6 +92,8 @@ export const orders = pgTable(
       .default("new"),
     total: numeric("total", { precision: 12, scale: 3 }).notNull(),
     notes: text("notes"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    dispatchedAt: timestamp("dispatched_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -113,8 +115,14 @@ export const orderItems = pgTable(
     rate: numeric("rate", { precision: 12, scale: 3 }).notNull(),
     amount: numeric("amount", { precision: 12, scale: 3 }).notNull(),
   },
-  (t) => [index("order_items_order_idx").on(t.orderId)]
+  (t) => [index("order_items_order_idx").on(t.orderId), index("order_items_barcode_idx").on(t.barcode)]
 );
 
-export const ORDER_STATUSES = ["new", "confirmed", "packed", "dispatched", "cancelled"] as const;
-export type OrderStatus = (typeof ORDER_STATUSES)[number];
+/** Key/value app settings, e.g. last_import_at (ISO timestamp of the last successful ERP import). */
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export { ORDER_STATUSES, type OrderStatus } from "../order-statuses";

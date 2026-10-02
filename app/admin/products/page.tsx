@@ -2,6 +2,7 @@ import Link from "next/link";
 import { and, asc, count, eq, exists, inArray, isNull, not, type SQL } from "drizzle-orm";
 import { db, products, productImages, categories } from "@/lib/db";
 import { productSearch } from "@/lib/catalog";
+import { availableSql, reservedSql } from "@/lib/stock";
 import ProductsTable, { type AdminProduct } from "./ProductsTable";
 
 export const metadata = { title: "Products – Toy Nation Admin" };
@@ -40,6 +41,8 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
         unit: products.unit,
         retailPrice: products.retailPrice,
         stockQty: products.stockQty,
+        reserved: reservedSql,
+        available: availableSql,
         inStock: products.inStock,
         isVisible: products.isVisible,
         categoryId: products.categoryId,

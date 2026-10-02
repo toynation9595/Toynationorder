@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql, type SQL } 
 import { db, products, productImages, categories } from "@/lib/db";
 import { getPriceType } from "@/lib/auth";
 import { priceFor, type PriceType } from "@/lib/pricing";
+import { availableSql } from "@/lib/stock";
 
 /** Product as sent to the browser: ONE price field only, decided by the server. Keyed by barcode. */
 export type PublicProduct = {
@@ -11,16 +12,18 @@ export type PublicProduct = {
   name: string;
   unit: string;
   price: number;
+  /** Units that can still be ordered (ERP stock minus reserved). */
+  available: number;
   inStock: boolean;
   image: string | null;
 };
 
 export type PublicCategory = { id: number; name: string; slug: string; count: number };
 
-/** Visible, in-stock product in an active category (or uncategorised). */
+/** Visible product with available stock, in an active category (or uncategorised). */
 const listable = and(
   eq(products.isVisible, true),
-  eq(products.inStock, true),
+  sql`${availableSql} > 0`,
   or(isNull(products.categoryId), eq(categories.isActive, true))
 )!;
 
@@ -36,12 +39,12 @@ const baseCols = {
   name: products.name,
   unit: products.unit,
   retailPrice: products.retailPrice,
-  inStock: products.inStock,
+  available: availableSql,
   image: primaryImage,
 };
 
 function toPublic(
-  r: { barcode: string; code: string; name: string; unit: string; retailPrice: string; inStock: boolean; image: string | null },
+  r: { barcode: string; code: string; name: string; unit: string; retailPrice: string; available: number; image: string | null },
   pt: PriceType
 ): PublicProduct {
   return {
@@ -50,7 +53,8 @@ function toPublic(
     name: r.name,
     unit: r.unit,
     price: priceFor(r.retailPrice, pt),
-    inStock: r.inStock,
+    available: Number(r.available),
+    inStock: Number(r.available) > 0,
     image: r.image,
   };
 }
@@ -66,7 +70,7 @@ export async function getActiveCategories(): Promise<PublicCategory[]> {
     .from(categories)
     .leftJoin(
       products,
-      and(eq(products.categoryId, categories.id), eq(products.isVisible, true), eq(products.inStock, true))
+      and(eq(products.categoryId, categories.id), eq(products.isVisible, true), sql`${availableSql} > 0`)
     )
     .where(eq(categories.isActive, true))
     .groupBy(categories.id)

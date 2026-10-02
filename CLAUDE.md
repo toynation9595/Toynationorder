@@ -38,8 +38,10 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 - categories: id, name, slug (unique), sort_order, is_active, created_at
 - products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), name, unit (text, as in ERP), retail_price (numeric 10,2), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
 - product_images: id, barcode (fk products.barcode), public_id, is_primary (bool), sort_order, created_at
-- orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'confirmed'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), created_at, updated_at
+- orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'confirmed'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), confirmed_at (timestamp null), dispatched_at (timestamp null), created_at, updated_at
 - order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time
+
+- settings: key (text pk), value (text), updated_at — holds `last_import_at` (ISO timestamp of the last successful ERP import)
 
 Seed script: creates owner user from OWNER_MOBILE/OWNER_PIN.
 
@@ -57,6 +59,15 @@ Source: stock report .xlsx from the ERP (single sheet).
 - New barcodes inherit the category_id of an existing product with the same code, if any.
 - Barcodes in DB but not in the file → in_stock = false.
 - Show result summary: new / updated / marked out of stock / skipped rows.
+- Every successful import sets settings.last_import_at = now().
+
+## Stock reservation (lib/stock.ts)
+- Nothing is stored; reservation is computed. reserved(barcode) = SUM(order_items.qty) where the order status is 'confirmed' or 'packed', OR status is 'dispatched' and dispatched_at > last_import_at (the ERP stock does not include it yet).
+- available = max(0, floor(stock_qty − reserved)). Cancelling an order releases its stock automatically.
+- Orders set confirmed_at when they become 'confirmed' and dispatched_at when they become 'dispatched'.
+- Public catalogue, category counts and product pages use `available`: products with available = 0 are hidden. Admin products shows them all with Stock / Reserved / Available columns.
+- Cart and checkout cap qty at available and show "Only X available". On submit the server locks the product rows and re-checks every line; it rejects with a per-item message if qty > available. A new order does not reserve stock.
+- Admin: moving an order into a stock-holding status (confirmed/packed/dispatched from new/cancelled) runs in a DB transaction on the Neon Pool (websocket) driver — never the HTTP driver — that locks the order and the affected product rows (SELECT … FOR UPDATE, in barcode order), re-checks available for every line, and blocks the change listing the short items.
 
 ## Design
 - Professional, playful-but-clean toy brand. White dominant background.
@@ -80,11 +91,11 @@ Owner (`/admin/*`, role-guarded in middleware): orders · order detail · produc
 3. Admin layout + `/admin/import` (ERP import as specified above).
 4. `/admin/categories` (add / rename / reorder / activate).
 5. `/admin/products`: list with search, filter (uncategorised / no image / out of stock), multi-select → bulk assign category, visibility toggle, image upload per product via Cloudinary widget (multiple images, set primary, delete — also delete from Cloudinary).
-6. Public `/`, `/products`, `/products/[barcode]` with server-side pricing. Only show products where is_visible = true AND in_stock = true; only active categories. Admin shows all products.
+6. Public `/`, `/products`, `/products/[barcode]` with server-side pricing. Only show products where is_visible = true AND available > 0 (see Stock reservation); only active categories. Admin shows all products.
 
 ### Day 2 – Ordering + accounts
 1. Cart in localStorage (stores product barcode + qty only; entries without a barcode are ignored). Cart page fetches current prices from server.
-2. `/checkout`: guest enters name, shop name, mobile (10 digits), city; logged-in retailer sees their details prefilled. Server recalculates prices, creates order + items, clears cart.
+2. `/checkout`: guest enters name, shop name, mobile (10 digits), city; logged-in retailer sees their details prefilled. Server recalculates prices, re-checks available stock, creates order + items, clears cart.
 3. `/order-placed/[orderNo]`: confirmation + "Send on WhatsApp" button → `https://wa.me/<NEXT_PUBLIC_OWNER_WHATSAPP>?text=<encoded order summary>` (order no, customer, shop, city, mobile, items × qty × rate, total).
 4. `/admin/orders`: list newest first, filter by status, search by order no / mobile / shop. `/admin/orders/[id]`: full detail, status dropdown, notes, link to call/WhatsApp the customer.
 5. `/admin/retailers`: add retailer (mobile, name, shop, city, PIN), edit, reset PIN, activate/deactivate.

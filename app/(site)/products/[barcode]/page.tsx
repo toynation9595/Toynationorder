@@ -51,7 +51,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[barc
           </div>
 
           <div className="mt-6">
-            <AddToCart barcode={p.barcode} inStock={p.inStock} />
+            <AddToCart barcode={p.barcode} available={p.available} />
           </div>
 
           {priceType === "retail" && (
