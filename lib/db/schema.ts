@@ -1,0 +1,118 @@
+import {
+  pgTable,
+  pgSequence,
+  serial,
+  integer,
+  text,
+  boolean,
+  timestamp,
+  numeric,
+  date,
+  index,
+} from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const orderNoSeq = pgSequence("order_no_seq", { startWith: 1001 });
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  mobile: text("mobile").notNull().unique(),
+  name: text("name").notNull(),
+  shopName: text("shop_name").notNull().default(""),
+  city: text("city").notNull().default(""),
+  pinHash: text("pin_hash").notNull(),
+  role: text("role", { enum: ["owner", "retailer"] }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const products = pgTable(
+  "products",
+  {
+    id: serial("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    unit: text("unit").notNull().default(""),
+    retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).notNull(),
+    stockQty: numeric("stock_qty", { precision: 12, scale: 3 }).notNull().default("0"),
+    inStock: boolean("in_stock").notNull().default(false),
+    categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
+    isVisible: boolean("is_visible").notNull().default(true),
+    lastReceived: date("last_received"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("products_category_idx").on(t.categoryId)]
+);
+
+export const productImages = pgTable(
+  "product_images",
+  {
+    id: serial("id").primaryKey(),
+    productCode: text("product_code")
+      .notNull()
+      .references(() => products.code, { onDelete: "cascade", onUpdate: "cascade" }),
+    publicId: text("public_id").notNull(),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("product_images_code_idx").on(t.productCode)]
+);
+
+export const orders = pgTable(
+  "orders",
+  {
+    id: serial("id").primaryKey(),
+    orderNo: integer("order_no")
+      .notNull()
+      .unique()
+      .default(sql`nextval('order_no_seq')`),
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    customerName: text("customer_name").notNull(),
+    shopName: text("shop_name").notNull().default(""),
+    mobile: text("mobile").notNull(),
+    city: text("city").notNull().default(""),
+    priceType: text("price_type", { enum: ["retail", "wholesale"] }).notNull(),
+    status: text("status", {
+      enum: ["new", "confirmed", "packed", "dispatched", "cancelled"],
+    })
+      .notNull()
+      .default("new"),
+    total: numeric("total", { precision: 12, scale: 3 }).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("orders_user_idx").on(t.userId), index("orders_mobile_idx").on(t.mobile)]
+);
+
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    productCode: text("product_code").notNull(),
+    productName: text("product_name").notNull(),
+    unit: text("unit").notNull().default(""),
+    qty: integer("qty").notNull(),
+    rate: numeric("rate", { precision: 12, scale: 3 }).notNull(),
+    amount: numeric("amount", { precision: 12, scale: 3 }).notNull(),
+  },
+  (t) => [index("order_items_order_idx").on(t.orderId)]
+);
+
+export const ORDER_STATUSES = ["new", "confirmed", "packed", "dispatched", "cancelled"] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];

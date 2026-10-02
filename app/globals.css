@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #5b3fa0;
+  --color-brand-dark: #3d2c6e;
+  --color-brand-light: #efeaf8;
+  --color-tn-orange: #f07a2e;
+  --color-tn-pink: #e8488a;
+  --color-tn-teal: #2bb5be;
+  --color-tn-yellow: #f5c518;
+  --font-heading: var(--font-fredoka), ui-rounded, system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+body {
+  background: #ffffff;
+  color: #1f1a2e;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 bg-brand text-white hover:bg-brand-dark;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-brand/30 bg-white text-brand hover:bg-brand-light;
+  }
+  .input {
+    @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20;
+  }
+  .card {
+    @apply rounded-2xl bg-white shadow-[0_2px_12px_rgba(61,44,110,0.08)] ring-1 ring-black/5;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-gray-700;
+  }
+}
