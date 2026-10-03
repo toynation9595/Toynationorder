@@ -6,7 +6,7 @@ import { db, orders, orderItems, ORDER_STATUSES, type OrderStatus } from "@/lib/
 import { requireOwner } from "@/lib/auth";
 import { lockAvailability, RESERVING_STATUSES } from "@/lib/stock";
 
-export type UpdateOrderState = { error?: string; ok?: string };
+export type UpdateOrderState = { error?: string; ok?: string; released?: boolean };
 
 const reserves = (s: string) => (RESERVING_STATUSES as readonly string[]).includes(s);
 
@@ -61,14 +61,11 @@ export async function updateOrder(_prev: UpdateOrderState, form: FormData): Prom
         ...(status !== o.status && status === "dispatched" ? { dispatchedAt: now } : {}),
       })
       .where(eq(orders.id, id));
-    return { ok: "Saved." };
+    // Reserved qty is computed, so cancelling a confirmed/packed order frees its stock immediately.
+    const released = status === "cancelled" && (o.status === "confirmed" || o.status === "packed");
+    return { ok: released ? "Saved. Stock released." : "Saved.", released };
   });
 
-  if (result.ok) {
-    revalidatePath(`/admin/orders/${id}`);
-    revalidatePath("/admin/orders");
-    revalidatePath("/my-orders", "layout");
-    revalidatePath("/", "layout");
-  }
+  if (result.ok) revalidatePath("/", "layout"); // every page: stock, admin lists, my-orders
   return result;
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { and, eq, notInArray, sql } from "drizzle-orm";
 import { db, products } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -102,5 +103,6 @@ export async function POST(req: Request) {
     } satisfies ImportSummary;
   });
 
+  revalidatePath("/", "layout");
   return NextResponse.json(summary);
 }

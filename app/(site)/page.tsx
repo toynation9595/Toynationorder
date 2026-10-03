@@ -5,6 +5,9 @@ import CategoryTile from "@/components/CategoryTile";
 import { ADDRESS } from "@/components/SiteFooter";
 import { featuredProducts, getActiveCategories } from "@/lib/catalog";
 
+// Stock and price change with every order/import: always render fresh.
+export const dynamic = "force-dynamic";
+
 const DOTS = [
   "left-[6%] top-[18%] h-3 w-3 bg-tn-yellow",
   "left-[14%] bottom-[16%] h-2 w-2 bg-tn-teal",

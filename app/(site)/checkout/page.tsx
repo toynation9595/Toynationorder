@@ -1,6 +1,9 @@
 import { getCurrentUser } from "@/lib/auth";
 import CheckoutForm from "./CheckoutForm";
 
+// Stock and price change with every order/import: always render fresh.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Checkout – Toy Nation" };
 
 export default async function CheckoutPage() {

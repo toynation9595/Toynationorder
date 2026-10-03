@@ -1,6 +1,9 @@
 import { getPriceType } from "@/lib/auth";
 import CartView from "./CartView";
 
+// Stock and price change with every order/import: always render fresh.
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Cart – Toy Nation" };
 
 export default async function CartPage() {

@@ -22,7 +22,12 @@ export default function OrderStatusForm({ id, status, notes }: { id: number; sta
         <textarea id="notes" name="notes" rows={4} defaultValue={notes} className="input" placeholder="Internal notes" />
       </div>
       {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.ok && <p className="rounded-lg bg-tn-teal/10 px-3 py-2 text-sm text-tn-teal">{state.ok}</p>}
+      {state.ok && <p className="rounded-lg bg-tn-teal/10 px-3 py-2 text-sm text-tn-teal">{state.released ? "Saved." : state.ok}</p>}
+      {state.released && (
+        <p className="rounded-lg bg-tn-yellow/20 px-3 py-2 text-sm font-semibold text-[#6b5200]">
+          Stock released — these items are available to order again.
+        </p>
+      )}
       <button disabled={pending} className="btn-primary w-full">{pending ? "Saving…" : "Save"}</button>
     </form>
   );

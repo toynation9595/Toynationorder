@@ -5,6 +5,9 @@ import { formatINR } from "@/lib/format";
 import Gallery from "./Gallery";
 import QtyStepper from "@/components/QtyStepper";
 
+// Stock and price change with every order/import: always render fresh.
+export const dynamic = "force-dynamic";
+
 export default async function ProductPage({ params }: PageProps<"/products/[barcode]">) {
   const { barcode } = await params;
   const data = await getProduct(decodeURIComponent(barcode));
