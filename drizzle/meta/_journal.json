@@ -36,6 +36,13 @@
       "when": 1791049129824,
       "tag": "0004_product_display_names",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791049804930,
+      "tag": "0005_wholesale_price",
+      "breakpoints": true
     }
   ]
 }

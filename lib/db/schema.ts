@@ -47,7 +47,7 @@ export const products = pgTable(
     displayName: text("display_name"), // owner override; import never touches it
     description: text("description"), // owner-written; import never touches it
     unit: text("unit").notNull().default(""),
-    retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).notNull(),
+    wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }).notNull(), // ERP Sales Price
     stockQty: numeric("stock_qty", { precision: 12, scale: 3 }).notNull().default("0"),
     inStock: boolean("in_stock").notNull().default(false),
     categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),

@@ -23,12 +23,13 @@ NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, NEXT_PUBLIC_OWNER_WHATSAPP (10-digit mobile; 
 OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 
 ## Roles & pricing (CRITICAL)
-- guest: no account, sees RETAIL price.
+- guest: no account, sees RETAIL price (owner also sees retail on the public site).
 - retailer: created by owner only (no self-registration). Logs in with mobile + PIN. Active retailer sees WHOLESALE price.
 - owner: full admin.
-- Retail price = `products.retail_price` (from ERP Sales Price).
-- Wholesale price = retail_price × 0.5 (constant `WHOLESALE_DISCOUNT = 0.5` in `lib/pricing.ts`). NO rounding: keep the exact value (store rates/amounts as numeric(12,3)); display with paise, e.g. ₹42.50.
-- Price is decided ON THE SERVER from the session. Product data sent to the browser contains ONE field `price` only. Never send both prices or the retail_price to a retailer view or wholesale price to a guest.
+- The ERP Sales Price is the WHOLESALE rate: Wholesale price = `products.wholesale_price`.
+- Retail price = wholesale_price × 2 (constant `RETAIL_MULTIPLIER = 2` in `lib/pricing.ts`, applied by `priceFor()`). NO rounding: keep the exact value (store rates/amounts as numeric(12,3)); display with paise, e.g. ₹42.50.
+- Price is decided ON THE SERVER from the session. Product data sent to the browser contains ONE field `price` only. Never send both prices to the browser, and never send the wholesale price to a guest. Admin products shows both (Wholesale and Retail ×2).
+- Existing orders/order_items keep the rates they were placed at.
 - On order submit, server ignores client prices and recalculates every line.
 - No GST anywhere. No MOQ. Quantity = any positive integer.
 - Mobile numbers: India only, default +91. Users type 10 digits (validate `^[6-9]\d{9}$`), store 10 digits, show "+91" as a fixed prefix in inputs. WhatsApp links use `91` + number.
@@ -36,7 +37,7 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 ## Database (Drizzle schema)
 - users: id, mobile (unique, text), name, shop_name, city, pin_hash, role ('owner'|'retailer'), is_active (bool, default true), failed_attempts (int), locked_until (timestamp null), created_at
 - categories: id, name, slug (unique), sort_order, is_active, created_at
-- products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), erp_name (from import), display_name (text null, owner override), description (text null), unit (text, as in ERP), retail_price (numeric 10,2), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
+- products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), erp_name (from import), display_name (text null, owner override), description (text null), unit (text, as in ERP), wholesale_price (numeric 10,2 – ERP Sales Price), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
 - product_images: id, barcode (fk products.barcode), public_id, is_primary (bool), sort_order, created_at
 - orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'confirmed'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), confirmed_at (timestamp null), dispatched_at (timestamp null), created_at, updated_at
 - order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time
@@ -54,8 +55,8 @@ Source: stock report .xlsx from the ERP (single sheet).
 - The product key is the Barcode. One barcode has many rows (batches). Group by Barcode:
   - stock_qty = SUM of Current Stock (can be negative)
   - in_stock = stock_qty > 0
-  - code, name, unit, retail_price, last_received = from the row with the LATEST Rec.Date (tie → last row)
-- Upsert by barcode: update code, erp_name, unit, retail_price, stock_qty, in_stock, last_received ONLY. Never touch category_id, is_visible, images, display_name or description.
+  - code, name, unit, wholesale_price, last_received = from the row with the LATEST Rec.Date (tie → last row)
+- Upsert by barcode: update code, erp_name, unit, wholesale_price, stock_qty, in_stock, last_received ONLY. Never touch category_id, is_visible, images, display_name or description.
 - New barcodes inherit the category_id of an existing product with the same code, if any.
 - Barcodes in DB but not in the file → in_stock = false.
 - Show result summary: new / updated / marked out of stock / skipped rows.

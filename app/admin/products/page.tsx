@@ -42,7 +42,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
         displayName: products.displayName,
         description: products.description,
         unit: products.unit,
-        retailPrice: products.retailPrice,
+        wholesalePrice: products.wholesalePrice,
         stockQty: products.stockQty,
         reserved: reservedSql,
         available: availableSql,

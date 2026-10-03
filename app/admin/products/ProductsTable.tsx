@@ -3,6 +3,7 @@
 
 import { useState, useTransition } from "react";
 import { formatINR } from "@/lib/format";
+import { priceFor } from "@/lib/pricing";
 import { cldUrl } from "@/lib/images";
 import { bulkAssignCategory, toggleVisible } from "./actions";
 import ImageManager from "./ImageManager";
@@ -19,7 +20,7 @@ export type AdminProduct = {
   autoName: string;
   description: string | null;
   unit: string;
-  retailPrice: string;
+  wholesalePrice: string;
   stockQty: string;
   reserved: number;
   available: number;
@@ -83,7 +84,7 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
       )}
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
               <th className="w-10 px-3 py-3">
@@ -96,7 +97,8 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
               </th>
               <th className="px-3 py-3">Product</th>
               <th className="px-3 py-3">Category</th>
-              <th className="px-3 py-3 text-right">Retail</th>
+              <th className="px-3 py-3 text-right">Wholesale</th>
+              <th className="px-3 py-3 text-right">Retail (×2)</th>
               <th className="px-3 py-3 text-right">Stock</th>
               <th className="px-3 py-3 text-right">Reserved</th>
               <th className="px-3 py-3 text-right">Available</th>
@@ -106,7 +108,7 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
           </thead>
           <tbody className="divide-y divide-gray-100">
             {products.length === 0 && (
-              <tr><td colSpan={9} className="p-8 text-center text-gray-500">No products found.</td></tr>
+              <tr><td colSpan={10} className="p-8 text-center text-gray-500">No products found.</td></tr>
             )}
             {products.map((p) => {
               const primary = p.images.find((i) => i.isPrimary) ?? p.images[0];
@@ -138,7 +140,8 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
                   <td className="px-3 py-2 text-gray-600">
                     {p.categoryId ? catName.get(p.categoryId) : <span className="text-tn-orange">Uncategorised</span>}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatINR(p.retailPrice)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{formatINR(p.wholesalePrice)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-gray-600">{formatINR(priceFor(p.wholesalePrice, "retail"))}</td>
                   <td className={`px-3 py-2 text-right tabular-nums ${p.inStock ? "" : "text-red-600"}`}>
                     {Number(p.stockQty)}
                   </td>

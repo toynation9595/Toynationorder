@@ -22,7 +22,7 @@ export type GroupedProduct = {
   code: string;
   name: string;
   unit: string;
-  retailPrice: number;
+  wholesalePrice: number; // ERP Sales Price
   stockQty: number;
   lastReceived: string | null;
 };
@@ -57,7 +57,7 @@ export function groupErpRows(rows: ErpRow[]): { products: GroupedProduct[]; skip
       code: g.latest.code.trim(),
       name: g.latest.name.trim() || barcode,
       unit: g.latest.unit.trim(),
-      retailPrice: g.latest.price,
+      wholesalePrice: g.latest.price,
       stockQty: Math.round(g.stock * 1000) / 1000,
       lastReceived: g.latest.recDate,
     });
