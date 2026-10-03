@@ -43,7 +43,9 @@ export const products = pgTable(
     id: serial("id").primaryKey(),
     barcode: text("barcode").notNull().unique(),
     code: text("code").notNull(),
-    name: text("name").notNull(),
+    erpName: text("erp_name").notNull(), // from the ERP import
+    displayName: text("display_name"), // owner override; import never touches it
+    description: text("description"), // owner-written; import never touches it
     unit: text("unit").notNull().default(""),
     retailPrice: numeric("retail_price", { precision: 10, scale: 2 }).notNull(),
     stockQty: numeric("stock_qty", { precision: 12, scale: 3 }).notNull().default("0"),

@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, products, productImages, categories } from "@/lib/db";
 import { requireOwner } from "@/lib/auth";
 import { CLOUDINARY_FOLDER, destroyImage } from "@/lib/cloudinary";
+import { cleanName } from "@/lib/productName";
 
 function done() {
   revalidatePath("/admin/products");
@@ -19,6 +20,34 @@ export async function bulkAssignCategory(barcodes: string[], categoryId: number 
     if (!c) return;
   }
   await db.update(products).set({ categoryId }).where(inArray(products.barcode, barcodes));
+  done();
+}
+
+export type TextState = { error?: string; ok?: string };
+
+/** Save display name + description. A display name equal to the auto name is stored as NULL. */
+export async function saveProductText(_prev: TextState, form: FormData): Promise<TextState> {
+  await requireOwner();
+  const barcode = String(form.get("barcode") ?? "");
+  const displayName = String(form.get("displayName") ?? "").trim().slice(0, 200);
+  const description = String(form.get("description") ?? "").trim().slice(0, 4000);
+  const [p] = await db.select({ erpName: products.erpName }).from(products).where(eq(products.barcode, barcode));
+  if (!p) return { error: "Product not found." };
+  await db
+    .update(products)
+    .set({
+      displayName: displayName && displayName !== cleanName(p.erpName) ? displayName : null,
+      description: description || null,
+    })
+    .where(eq(products.barcode, barcode));
+  done();
+  return { ok: "Saved." };
+}
+
+/** Clear the display name so the auto-cleaned ERP name is used. */
+export async function resetDisplayName(barcode: string) {
+  await requireOwner();
+  await db.update(products).set({ displayName: null }).where(eq(products.barcode, barcode));
   done();
 }
 

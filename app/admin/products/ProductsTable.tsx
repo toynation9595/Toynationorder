@@ -6,12 +6,18 @@ import { formatINR } from "@/lib/format";
 import { cldUrl } from "@/lib/images";
 import { bulkAssignCategory, toggleVisible } from "./actions";
 import ImageManager from "./ImageManager";
+import ProductTextEditor from "./ProductTextEditor";
 
 export type AdminImage = { id: number; publicId: string; isPrimary: boolean };
 export type AdminProduct = {
   barcode: string;
   code: string;
+  /** Shown name: display name, else the auto-cleaned ERP name. */
   name: string;
+  erpName: string;
+  displayName: string | null;
+  autoName: string;
+  description: string | null;
   unit: string;
   retailPrice: string;
   stockQty: string;
@@ -34,6 +40,7 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTo, setAssignTo] = useState("");
   const [openBarcode, setOpenBarcode] = useState<string | null>(null);
+  const [editBarcode, setEditBarcode] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const catName = new Map(categories.map((c) => [c.id, c.name]));
@@ -114,7 +121,16 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
                         {primary && <img src={cldUrl(primary.publicId, 120)} alt="" className="h-full w-full object-cover" />}
                       </div>
                       <div className="min-w-0">
-                        <div className="truncate font-medium text-gray-900">{p.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="truncate font-medium text-gray-900">{p.name}</span>
+                          <button
+                            onClick={() => setEditBarcode(p.barcode)}
+                            className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold text-brand hover:bg-brand-light"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                        <div className="truncate text-[11px] text-gray-400">ERP: {p.erpName}</div>
                         <div className="text-xs text-gray-500"><span className="font-mono">{p.barcode}</span> · #{p.code} · {p.unit}</div>
                       </div>
                     </div>
@@ -151,6 +167,10 @@ export default function ProductsTable({ products, categories, cloudName, apiKey 
           </tbody>
         </table>
       </div>
+
+      {editBarcode && products.find((p) => p.barcode === editBarcode) && (
+        <ProductTextEditor product={products.find((p) => p.barcode === editBarcode)!} onClose={() => setEditBarcode(null)} />
+      )}
 
       {open && (
         <ImageManager product={open} cloudName={cloudName} apiKey={apiKey} onClose={() => setOpenBarcode(null)} />

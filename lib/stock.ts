@@ -1,6 +1,7 @@
 import "server-only";
 import { asc, inArray, sql } from "drizzle-orm";
 import { db, products, settings } from "@/lib/db";
+import { shownName } from "@/lib/productName";
 
 /**
  * Stock reservation rules.
@@ -53,10 +54,17 @@ export async function lockAvailability(
     .orderBy(asc(products.barcode))
     .for("update");
   const rows = await tx
-    .select({ barcode: products.barcode, name: products.name, available: availableSql })
+    .select({
+      barcode: products.barcode,
+      erpName: products.erpName,
+      displayName: products.displayName,
+      available: availableSql,
+    })
     .from(products)
     .where(inArray(products.barcode, list));
-  return new Map(rows.map((r) => [r.barcode, { name: r.name, available: Number(r.available) }]));
+  return new Map(
+    rows.map((r) => [r.barcode, { name: shownName(r.displayName, r.erpName), available: Number(r.available) }])
+  );
 }
 
 /** Record a successful ERP import (dispatched orders before this are now in the ERP stock). */

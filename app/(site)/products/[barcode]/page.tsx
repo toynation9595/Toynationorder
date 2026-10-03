@@ -12,7 +12,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[barc
   const { barcode } = await params;
   const data = await getProduct(decodeURIComponent(barcode));
   if (!data) notFound();
-  const { product: p, images, category, priceType } = data;
+  const { product: p, description, images, category, priceType } = data;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -31,7 +31,8 @@ export default async function ProductPage({ params }: PageProps<"/products/[barc
 
         <div>
           <h1 className="text-2xl font-semibold leading-tight text-gray-900 md:text-3xl">{p.name}</h1>
-          <p className="mt-1 font-mono text-xs text-gray-400">{p.barcode}</p>
+          {description && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-gray-600">{description}</p>}
+          <p className="mt-2 font-mono text-xs text-gray-400">{p.barcode}</p>
           <p className="mt-1 text-sm text-gray-500">Code #{p.code} · {p.unit}</p>
 
           <div className="mt-5 flex items-baseline gap-3">

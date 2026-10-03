@@ -4,6 +4,7 @@ import { db, products, productImages, categories } from "@/lib/db";
 import { getPriceType } from "@/lib/auth";
 import { priceFor } from "@/lib/pricing";
 import { availableSql } from "@/lib/stock";
+import { shownName } from "@/lib/productName";
 
 /** Product as sent to the browser: ONE price field only, decided by the server. Keyed by barcode. */
 export type PublicProduct = {
@@ -18,6 +19,15 @@ export type PublicProduct = {
   image: string | null;
 };
 
+/** Same rules as cleanName() in lib/productName.ts, in SQL — used only for sorting by the shown name. */
+// POSIX [[:space:]] instead of \s: no backslash escaping across the JS → SQL boundary.
+const CLEAN_PREFIX_RE = "^(T[[:space:]]+[A-Za-z]{3}|BAH[[:space:]]+DBT|[A-Za-z])([[:space:]]+|$)";
+export const shownNameSql = sql<string>`coalesce(
+  nullif(btrim(${products.displayName}), ''),
+  nullif(regexp_replace(btrim(${products.erpName}), ${CLEAN_PREFIX_RE}, ''), ''),
+  btrim(${products.erpName})
+)`;
+
 export type PublicCategory = { id: number; name: string; slug: string; count: number; image: string | null };
 
 /*
@@ -29,7 +39,7 @@ const categoryImage = sql<string | null>`(
   select pi.public_id from products p2
   join product_images pi on pi.barcode = p2.barcode
   where p2.category_id = "categories"."id" and p2.is_visible and p2.in_stock
-  order by p2.name, p2.barcode, pi.is_primary desc, pi.sort_order
+  order by coalesce(p2.display_name, p2.erp_name), p2.barcode, pi.is_primary desc, pi.sort_order
   limit 1
 )`;
 
@@ -46,7 +56,11 @@ const primaryImage = sql<string | null>`(
   order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc limit 1
 )`;
 
-type PublicRow = { product: PublicProduct; category: { name: string; slug: string } | null };
+type PublicRow = {
+  product: PublicProduct;
+  description: string | null;
+  category: { name: string; slug: string } | null;
+};
 
 /**
  * The ONE query behind every product list the public site shows (home, catalogue, search,
@@ -64,7 +78,9 @@ async function queryPublicProducts(opts: {
     .select({
       barcode: products.barcode,
       code: products.code,
-      name: products.name,
+      erpName: products.erpName,
+      displayName: products.displayName,
+      description: products.description,
       unit: products.unit,
       retailPrice: products.retailPrice,
       available: availableSql,
@@ -75,7 +91,7 @@ async function queryPublicProducts(opts: {
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .where(opts.where ? and(listable, opts.where) : listable)
-    .orderBy(...(opts.orderBy ?? [asc(products.name), asc(products.barcode)]))
+    .orderBy(...(opts.orderBy ?? [asc(shownNameSql), asc(products.barcode)]))
     .$dynamic();
   if (opts.limit !== undefined) q = q.limit(opts.limit);
   if (opts.offset) q = q.offset(opts.offset);
@@ -86,21 +102,31 @@ async function queryPublicProducts(opts: {
       product: {
         barcode: r.barcode,
         code: r.code,
-        name: r.name,
+        name: shownName(r.displayName, r.erpName),
         unit: r.unit,
         price: priceFor(r.retailPrice, pt),
         available,
         inStock: available > 0,
         image: r.image,
       },
+      description: r.description?.trim() || null,
       category: r.categoryName && r.categorySlug ? { name: r.categoryName, slug: r.categorySlug } : null,
     };
   });
 }
 
-/** Search across name, ERP code and barcode. */
+/**
+ * Search across the shown name, ERP name, code and barcode. The auto-cleaned name is a suffix of
+ * the ERP name, so matching erp_name and display_name covers every shown name.
+ */
 export function productSearch(q: string): SQL {
-  return or(ilike(products.name, `%${q}%`), ilike(products.code, `%${q}%`), ilike(products.barcode, `%${q}%`))!;
+  const like = `%${q}%`;
+  return or(
+    ilike(products.displayName, like),
+    ilike(products.erpName, like),
+    ilike(products.code, like),
+    ilike(products.barcode, like)
+  )!;
 }
 
 export async function getActiveCategories(): Promise<PublicCategory[]> {
@@ -145,7 +171,7 @@ export async function listProducts(opts: { q?: string; categoryId?: number; page
 /** A few products for the home page, newest arrivals with images first. */
 export async function featuredProducts(limit = 8): Promise<PublicProduct[]> {
   const rows = await queryPublicProducts({
-    orderBy: [sql`${primaryImage} is null`, sql`${products.lastReceived} desc nulls last`, asc(products.name)],
+    orderBy: [sql`${primaryImage} is null`, sql`${products.lastReceived} desc nulls last`, asc(shownNameSql)],
     limit,
   });
   return rows.map((r) => r.product);
@@ -168,5 +194,11 @@ export async function getProduct(barcode: string) {
     .from(productImages)
     .where(eq(productImages.barcode, barcode))
     .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder));
-  return { product: r.product, images: images.map((i) => i.publicId), category: r.category, priceType };
+  return {
+    product: r.product,
+    description: r.description,
+    images: images.map((i) => i.publicId),
+    category: r.category,
+    priceType,
+  };
 }

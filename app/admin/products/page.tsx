@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { and, asc, count, eq, exists, inArray, isNull, not, type SQL } from "drizzle-orm";
 import { db, products, productImages, categories } from "@/lib/db";
-import { productSearch } from "@/lib/catalog";
+import { productSearch, shownNameSql } from "@/lib/catalog";
+import { cleanName, shownName } from "@/lib/productName";
 import { availableSql, reservedSql } from "@/lib/stock";
 import ProductsTable, { type AdminProduct } from "./ProductsTable";
 
@@ -37,7 +38,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
       .select({
         barcode: products.barcode,
         code: products.code,
-        name: products.name,
+        erpName: products.erpName,
+        displayName: products.displayName,
+        description: products.description,
         unit: products.unit,
         retailPrice: products.retailPrice,
         stockQty: products.stockQty,
@@ -49,7 +52,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
       })
       .from(products)
       .where(where)
-      .orderBy(asc(products.name))
+      .orderBy(asc(shownNameSql), asc(products.barcode))
       .limit(PAGE_SIZE)
       .offset((page - 1) * PAGE_SIZE),
     db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(asc(categories.sortOrder)),
@@ -66,6 +69,8 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
 
   const list: AdminProduct[] = rows.map((r) => ({
     ...r,
+    name: shownName(r.displayName, r.erpName),
+    autoName: cleanName(r.erpName),
     images: imgs.filter((i) => i.barcode === r.barcode).map(({ id, publicId, isPrimary }) => ({ id, publicId, isPrimary })),
   }));
 

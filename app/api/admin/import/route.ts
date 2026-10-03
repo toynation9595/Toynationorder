@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       const chunk = grouped.slice(i, i + CHUNK).map((p) => ({
         barcode: p.barcode,
         code: p.code,
-        name: p.name,
+        erpName: p.name,
         unit: p.unit,
         retailPrice: String(p.retailPrice),
         stockQty: String(p.stockQty),
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
           target: products.barcode,
           set: {
             code: sql`excluded.code`,
-            name: sql`excluded.name`,
+            erpName: sql`excluded.erp_name`,
             unit: sql`excluded.unit`,
             retailPrice: sql`excluded.retail_price`,
             stockQty: sql`excluded.stock_qty`,

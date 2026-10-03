@@ -36,7 +36,7 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 ## Database (Drizzle schema)
 - users: id, mobile (unique, text), name, shop_name, city, pin_hash, role ('owner'|'retailer'), is_active (bool, default true), failed_attempts (int), locked_until (timestamp null), created_at
 - categories: id, name, slug (unique), sort_order, is_active, created_at
-- products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), name, unit (text, as in ERP), retail_price (numeric 10,2), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
+- products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), erp_name (from import), display_name (text null, owner override), description (text null), unit (text, as in ERP), retail_price (numeric 10,2), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
 - product_images: id, barcode (fk products.barcode), public_id, is_primary (bool), sort_order, created_at
 - orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'confirmed'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), confirmed_at (timestamp null), dispatched_at (timestamp null), created_at, updated_at
 - order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time
@@ -55,11 +55,16 @@ Source: stock report .xlsx from the ERP (single sheet).
   - stock_qty = SUM of Current Stock (can be negative)
   - in_stock = stock_qty > 0
   - code, name, unit, retail_price, last_received = from the row with the LATEST Rec.Date (tie → last row)
-- Upsert by barcode: update code, name, unit, retail_price, stock_qty, in_stock, last_received ONLY. Never touch category_id, is_visible, or images.
+- Upsert by barcode: update code, erp_name, unit, retail_price, stock_qty, in_stock, last_received ONLY. Never touch category_id, is_visible, images, display_name or description.
 - New barcodes inherit the category_id of an existing product with the same code, if any.
 - Barcodes in DB but not in the file → in_stock = false.
 - Show result summary: new / updated / marked out of stock / skipped rows.
 - Every successful import sets settings.last_import_at = now().
+
+## Product names (lib/productName.ts)
+- cleanName(erp_name): first word "T" + second word of exactly 3 letters → drop both; starts with "BAH DBT" → drop both; else a single-letter first word → drop it. Never empty (falls back to erp_name).
+- Shown name = display_name ?? cleanName(erp_name), used everywhere (cards, product page, cart, checkout, order items snapshot, WhatsApp). `shownNameSql` in lib/catalog.ts mirrors it for sorting.
+- Search matches display_name, erp_name, code and barcode. Admin products edits display name (Reset to auto clears it) and description; the product page shows the description.
 
 ## Stock reservation (lib/stock.ts)
 - Nothing is stored; reservation is computed. reserved(barcode) = SUM(order_items.qty) where the order status is 'confirmed' or 'packed', OR status is 'dispatched' and dispatched_at > last_import_at (the ERP stock does not include it yet).
