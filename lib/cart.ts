@@ -49,6 +49,9 @@ function subscribe(cb: () => void) {
 }
 
 export const cart = {
+  lines(): CartLine[] {
+    return read();
+  },
   add(barcode: string, qty: number) {
     const lines = [...read()];
     const i = lines.findIndex((l) => l.barcode === barcode);
@@ -69,9 +72,4 @@ export const cart = {
 
 export function useCart(): CartLine[] {
   return useSyncExternalStore(subscribe, read, () => EMPTY);
-}
-
-export function parseQty(v: string): number | null {
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 && n <= 100000 ? n : null;
 }

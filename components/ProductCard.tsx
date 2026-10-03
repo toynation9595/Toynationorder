@@ -3,7 +3,7 @@ import Link from "next/link";
 import { formatINR } from "@/lib/format";
 import { cldUrl } from "@/lib/images";
 import type { PublicProduct } from "@/lib/catalog";
-import AddToCart from "./AddToCart";
+import QtyStepper from "./QtyStepper";
 
 export function ProductImagePlaceholder() {
   return (
@@ -14,29 +14,26 @@ export function ProductImagePlaceholder() {
 }
 
 export default function ProductCard({ p }: { p: PublicProduct }) {
+  const href = `/products/${encodeURIComponent(p.barcode)}`;
   return (
-    <div className="card group flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(61,44,110,0.14)]">
-      <Link href={`/products/${encodeURIComponent(p.barcode)}`} className="relative block aspect-square bg-gray-50">
+    <div className="card flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(61,44,110,0.14)]">
+      <Link href={href} className="relative block aspect-square overflow-hidden border-b border-gray-100 bg-white">
         {p.image ? (
-          <img src={cldUrl(p.image, 400)} alt={p.name} loading="lazy" className="h-full w-full object-cover" />
+          <img src={cldUrl(p.image, 400)} alt={p.name} loading="lazy" className="h-full w-full object-contain p-2" />
         ) : (
           <ProductImagePlaceholder />
         )}
-        {!p.inStock && (
-          <span className="absolute left-2 top-2 rounded-full bg-gray-900/80 px-2 py-0.5 text-[11px] font-semibold text-white">
-            Out of stock
-          </span>
-        )}
       </Link>
       <div className="flex flex-1 flex-col p-3">
-        <Link href={`/products/${encodeURIComponent(p.barcode)}`} className="line-clamp-2 text-sm font-medium leading-snug text-gray-900 hover:text-brand">
+        <Link href={href} className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-5 text-gray-900 hover:text-brand">
           {p.name}
         </Link>
-        <span className="mt-0.5 font-mono text-[11px] text-gray-400">{p.barcode}</span>
+        <span className="mt-0.5 truncate font-mono text-[11px] text-gray-400">{p.barcode}</span>
         <span className="text-xs text-gray-500">{p.unit}</span>
-        <div className="mt-auto pt-2 font-heading text-lg font-semibold text-brand-dark">{formatINR(p.price)}</div>
-        <div className="mt-2">
-          <AddToCart barcode={p.barcode} available={p.available} compact />
+        <span className="text-xs font-medium text-tn-teal">Stock: {p.available}</span>
+        <div className="mt-auto pt-2">
+          <div className="mb-2 font-heading text-lg font-semibold text-brand-dark">{formatINR(p.price)}</div>
+          <QtyStepper barcode={p.barcode} available={p.available} />
         </div>
       </div>
     </div>

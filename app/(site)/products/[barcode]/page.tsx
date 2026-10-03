@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getProduct } from "@/lib/catalog";
 import { formatINR } from "@/lib/format";
 import Gallery from "./Gallery";
-import AddToCart from "@/components/AddToCart";
+import QtyStepper from "@/components/QtyStepper";
 
 export default async function ProductPage({ params }: PageProps<"/products/[barcode]">) {
   const { barcode } = await params;
@@ -41,7 +41,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[barc
           <div className="mt-3">
             {p.inStock ? (
               <span className="inline-flex items-center gap-1.5 text-sm font-medium text-tn-teal">
-                <span className="h-2 w-2 rounded-full bg-tn-teal" /> In stock
+                <span className="h-2 w-2 rounded-full bg-tn-teal" /> Stock: {p.available}
               </span>
             ) : (
               <span className="inline-flex rounded-full bg-gray-900/80 px-2.5 py-0.5 text-xs font-semibold text-white">
@@ -51,7 +51,9 @@ export default async function ProductPage({ params }: PageProps<"/products/[barc
           </div>
 
           <div className="mt-6">
-            <AddToCart barcode={p.barcode} available={p.available} />
+            <div className="max-w-xs">
+              <QtyStepper barcode={p.barcode} available={p.available} size="lg" />
+            </div>
           </div>
 
           {priceType === "retail" && (
