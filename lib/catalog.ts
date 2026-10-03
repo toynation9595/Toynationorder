@@ -18,7 +18,20 @@ export type PublicProduct = {
   image: string | null;
 };
 
-export type PublicCategory = { id: number; name: string; slug: string; count: number };
+export type PublicCategory = { id: number; name: string; slug: string; count: number; image: string | null };
+
+/*
+ * Primary image of the first visible, in-stock product (by name) in the category that has an image.
+ * Correlated subquery so all categories load in ONE query; explicit aliases avoid ambiguity with the
+ * outer join on products.
+ */
+const categoryImage = sql<string | null>`(
+  select pi.public_id from products p2
+  join product_images pi on pi.barcode = p2.barcode
+  where p2.category_id = "categories"."id" and p2.is_visible and p2.in_stock
+  order by p2.name, p2.barcode, pi.is_primary desc, pi.sort_order
+  limit 1
+)`;
 
 /** Visible product with available stock, in an active category (or uncategorised). */
 const listable = and(
@@ -92,7 +105,13 @@ export function productSearch(q: string): SQL {
 
 export async function getActiveCategories(): Promise<PublicCategory[]> {
   return db
-    .select({ id: categories.id, name: categories.name, slug: categories.slug, count: count(products.id) })
+    .select({
+      id: categories.id,
+      name: categories.name,
+      slug: categories.slug,
+      count: count(products.id),
+      image: categoryImage,
+    })
     .from(categories)
     .leftJoin(
       products,

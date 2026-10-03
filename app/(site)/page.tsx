@@ -1,16 +1,9 @@
 import Link from "next/link";
 import LogoTile from "@/components/LogoTile";
 import ProductCard from "@/components/ProductCard";
+import CategoryTile from "@/components/CategoryTile";
 import { ADDRESS } from "@/components/SiteFooter";
 import { featuredProducts, getActiveCategories } from "@/lib/catalog";
-
-const TILE_COLORS = [
-  "bg-tn-orange/10 text-tn-orange ring-tn-orange/20",
-  "bg-tn-pink/10 text-tn-pink ring-tn-pink/20",
-  "bg-tn-teal/10 text-tn-teal ring-tn-teal/20",
-  "bg-tn-yellow/15 text-[#a8850a] ring-tn-yellow/30",
-  "bg-brand-light text-brand ring-brand/20",
-];
 
 const DOTS = [
   "left-[6%] top-[18%] h-3 w-3 bg-tn-yellow",
@@ -52,16 +45,9 @@ export default async function HomePage() {
       {cats.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 pt-12">
           <h2 className="mb-5 text-2xl font-semibold text-brand-dark">Shop by category</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
             {cats.map((c, i) => (
-              <Link
-                key={c.id}
-                href={`/products?category=${c.slug}`}
-                className={`rounded-2xl p-4 ring-1 transition hover:-translate-y-0.5 ${TILE_COLORS[i % TILE_COLORS.length]}`}
-              >
-                <div className="font-heading text-lg font-semibold leading-tight">{c.name}</div>
-                <div className="mt-1 text-xs opacity-80">{c.count} items</div>
-              </Link>
+              <CategoryTile key={c.id} c={c} index={i} />
             ))}
           </div>
         </section>
