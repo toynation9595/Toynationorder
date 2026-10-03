@@ -26,7 +26,7 @@ export function orderSummaryText(o: OrderRow, items: OrderItemRow[]): string {
   const lines = [
     `*New order ${orderLabel(o.orderNo)}*`,
     `Customer: ${o.customerName}`,
-    `Shop: ${o.shopName}`,
+    ...(o.shopName ? [`Shop: ${o.shopName}`] : []),
     `City: ${o.city}`,
     `Mobile: +91 ${o.mobile}`,
     `Price: ${o.priceType === "wholesale" ? "Wholesale" : "Retail"}`,

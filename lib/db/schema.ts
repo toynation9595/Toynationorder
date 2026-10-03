@@ -81,7 +81,7 @@ export const orders = pgTable(
       .default(sql`nextval('order_no_seq')`),
     userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
     customerName: text("customer_name").notNull(),
-    shopName: text("shop_name").notNull().default(""),
+    shopName: text("shop_name"), // optional for guests; NULL when not given
     mobile: text("mobile").notNull(),
     city: text("city").notNull().default(""),
     priceType: text("price_type", { enum: ["retail", "wholesale"] }).notNull(),

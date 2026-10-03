@@ -25,7 +25,7 @@ export default async function MyOrderPage({ params }: PageProps<"/my-orders/[ord
       <div className="card space-y-4 p-5">
         <div className="grid gap-1 text-sm text-gray-700 sm:grid-cols-2">
           <div><span className="text-gray-500">Name:</span> {o.customerName}</div>
-          <div><span className="text-gray-500">Shop:</span> {o.shopName}</div>
+          {o.shopName && <div><span className="text-gray-500">Shop:</span> {o.shopName}</div>}
           <div><span className="text-gray-500">Mobile:</span> +91 {o.mobile}</div>
           <div><span className="text-gray-500">City:</span> {o.city}</div>
         </div>

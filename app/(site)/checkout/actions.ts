@@ -27,11 +27,10 @@ function shortMessage(name: string, qty: number, available: number) {
 
 export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> {
   const name = String(input?.name ?? "").trim().slice(0, 100);
-  const shopName = String(input?.shopName ?? "").trim().slice(0, 120);
+  const shopName = String(input?.shopName ?? "").trim().slice(0, 120) || null; // optional
   const mobile = String(input?.mobile ?? "").trim();
   const city = String(input?.city ?? "").trim().slice(0, 80);
   if (!name) return { error: "Please enter your name." };
-  if (!shopName) return { error: "Please enter your shop name." };
   if (!MOBILE_RE.test(mobile)) return { error: "Please enter a valid 10-digit mobile number." };
   if (!city) return { error: "Please enter your city." };
 

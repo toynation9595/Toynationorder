@@ -31,7 +31,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           <div className="card p-5 text-sm">
             <h2 className="mb-2 text-base font-semibold text-brand-dark">Customer</h2>
             <div className="font-medium text-gray-900">{o.customerName}</div>
-            <div className="text-gray-600">{o.shopName}</div>
+            {o.shopName && <div className="text-gray-600">{o.shopName}</div>}
             <div className="text-gray-600">{o.city}</div>
             <div className="mt-1 text-gray-600">+91 {o.mobile}</div>
             {!o.userId && <div className="mt-1 text-xs text-gray-400">Guest order</div>}

@@ -22,6 +22,13 @@
       "when": 1790953440215,
       "tag": "0002_stock_reservation",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791048713446,
+      "tag": "0003_optional_order_shop_name",
+      "breakpoints": true
     }
   ]
 }

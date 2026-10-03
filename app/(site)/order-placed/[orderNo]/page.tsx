@@ -43,7 +43,7 @@ export default async function OrderPlacedPage({ params }: PageProps<"/order-plac
 
           <div className="grid gap-1 text-sm text-gray-700 sm:grid-cols-2">
             <div><span className="text-gray-500">Customer:</span> {order.customerName}</div>
-            <div><span className="text-gray-500">Shop:</span> {order.shopName}</div>
+            {order.shopName && <div><span className="text-gray-500">Shop:</span> {order.shopName}</div>}
             <div><span className="text-gray-500">Mobile:</span> +91 {order.mobile}</div>
             <div><span className="text-gray-500">City:</span> {order.city}</div>
           </div>

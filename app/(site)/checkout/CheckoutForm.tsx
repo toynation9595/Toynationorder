@@ -80,8 +80,8 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
             <input id="name" name="name" required defaultValue={prefill?.name} className="input" autoComplete="name" />
           </div>
           <div>
-            <label htmlFor="shopName" className="label">Shop name</label>
-            <input id="shopName" name="shopName" required defaultValue={prefill?.shopName} className="input" autoComplete="organization" />
+            <label htmlFor="shopName" className="label">Shop name (if available)</label>
+            <input id="shopName" name="shopName" defaultValue={prefill?.shopName} placeholder="Optional" className="input" autoComplete="organization" />
           </div>
           <div>
             <label htmlFor="mobile" className="label">Mobile</label>
