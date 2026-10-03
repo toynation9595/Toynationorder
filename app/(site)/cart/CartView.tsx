@@ -23,16 +23,21 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
     getCartProducts(codes).then((ps) => {
       if (!alive) return;
       const map = new Map(ps.map((p) => [p.barcode, p]));
-      // Cap existing cart quantities to the current available stock.
+      // Clamp stored quantities to the current available stock (0 removes the line).
       const notes: string[] = [];
       for (const l of cart.lines()) {
         const p = map.get(l.barcode);
-        if (p && p.available > 0 && l.qty > p.available) {
-          cart.setQty(l.barcode, p.available);
-          notes.push(`${p.name}: reduced from ${l.qty} to ${p.available} (only ${p.available} available)`);
+        const available = p?.available ?? 0;
+        if (l.qty > available) {
+          cart.setQty(l.barcode, available, available);
+          notes.push(
+            available > 0
+              ? `${p!.name}: reduced from ${l.qty} to ${available} (only ${available} available)`
+              : `${p?.name ?? l.barcode}: removed (out of stock)`
+          );
         }
       }
-      setReduced(notes);
+      if (notes.length) setReduced((prev) => [...prev, ...notes]);
       setPrices(map);
     });
     return () => {
@@ -93,7 +98,7 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
                 {p && <div className="text-xs text-gray-500">{p.unit} · {formatINR(p.price)} · Stock: {p.available}</div>}
                 {p ? (
                   <div className="mt-2 w-40">
-                    <QtyStepper barcode={line.barcode} available={p.available} />
+                    <QtyStepper barcode={line.barcode} max={p.available} />
                   </div>
                 ) : (
                   <div className="mt-1 flex items-center gap-3 text-xs">

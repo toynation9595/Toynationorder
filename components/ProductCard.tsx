@@ -15,6 +15,7 @@ export function ProductImagePlaceholder() {
 
 export default function ProductCard({ p }: { p: PublicProduct }) {
   const href = `/products/${encodeURIComponent(p.barcode)}`;
+  const available = p.available; // one value drives both the label and the stepper limit
   return (
     <div className="card flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(61,44,110,0.14)]">
       <Link href={href} className="relative block aspect-square overflow-hidden border-b border-gray-100 bg-white">
@@ -30,10 +31,10 @@ export default function ProductCard({ p }: { p: PublicProduct }) {
         </Link>
         <span className="mt-0.5 truncate font-mono text-[11px] text-gray-400">{p.barcode}</span>
         <span className="text-xs text-gray-500">{p.unit}</span>
-        <span className="text-xs font-medium text-tn-teal">Stock: {p.available}</span>
+        <span className="text-xs font-medium text-tn-teal">Stock: {available}</span>
         <div className="mt-auto pt-2">
           <div className="mb-2 font-heading text-lg font-semibold text-brand-dark">{formatINR(p.price)}</div>
-          <QtyStepper barcode={p.barcode} available={p.available} />
+          <QtyStepper barcode={p.barcode} max={available} />
         </div>
       </div>
     </div>

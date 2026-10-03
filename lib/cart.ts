@@ -52,15 +52,21 @@ export const cart = {
   lines(): CartLine[] {
     return read();
   },
-  add(barcode: string, qty: number) {
-    const lines = [...read()];
-    const i = lines.findIndex((l) => l.barcode === barcode);
-    if (i >= 0) lines[i] = { barcode, qty: lines[i].qty + qty };
-    else lines.push({ barcode, qty });
-    write(lines);
+  /** Add qty to the line, clamped to 0..max (max = available stock). */
+  addItem(barcode: string, qty: number, max: number) {
+    const current = read().find((l) => l.barcode === barcode)?.qty ?? 0;
+    cart.setQty(barcode, current + qty, max);
   },
-  setQty(barcode: string, qty: number) {
-    write(read().map((l) => (l.barcode === barcode ? { barcode, qty } : l)));
+  /** Set the line qty, clamped to 0..max; 0 removes the line. */
+  setQty(barcode: string, qty: number, max: number) {
+    const q = Math.max(0, Math.min(Math.floor(Number(qty) || 0), Math.floor(Number(max) || 0)));
+    const lines = read();
+    if (q === 0) {
+      write(lines.filter((l) => l.barcode !== barcode));
+      return;
+    }
+    const exists = lines.some((l) => l.barcode === barcode);
+    write(exists ? lines.map((l) => (l.barcode === barcode ? { barcode, qty: q } : l)) : [...lines, { barcode, qty: q }]);
   },
   remove(barcode: string) {
     write(read().filter((l) => l.barcode !== barcode));

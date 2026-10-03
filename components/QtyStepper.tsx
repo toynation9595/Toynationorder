@@ -3,25 +3,24 @@
 import { useState } from "react";
 import { cart, useCart } from "@/lib/cart";
 
-type Props = { barcode: string; available: number; size?: "sm" | "lg" };
+type Props = { barcode: string; max: number; size?: "sm" | "lg" };
 
 /**
  * Shared Add / [− qty +] control bound to the localStorage cart.
- * Qty is kept within 1..available; − at 1 removes the item.
+ * `max` is the available stock; the cart store itself clamps every write to 0..max.
  * Always renders the helper line so cards keep the same height in every state.
  */
-export default function QtyStepper({ barcode, available, size = "sm" }: Props) {
+export default function QtyStepper({ barcode, max, size = "sm" }: Props) {
+  const limit = Math.max(0, Math.floor(Number(max) || 0));
   const qty = useCart().find((l) => l.barcode === barcode)?.qty ?? 0;
   const [draft, setDraft] = useState<string | null>(null);
   const lg = size === "lg";
   const h = lg ? "h-12 text-base" : "h-9 text-sm";
   const sideW = lg ? "w-14" : "w-9";
-  const atMax = qty > 0 && qty >= available;
-  const clamp = (n: number) => Math.min(Math.max(1, n), available);
-  const set = (n: number) => cart.setQty(barcode, clamp(n));
+  const atMax = qty > 0 && qty >= limit;
 
   let control: React.ReactNode;
-  if (available <= 0) {
+  if (limit === 0) {
     control = (
       <button disabled className={`btn w-full bg-gray-200 text-gray-500 ${h}`}>
         Out of stock
@@ -29,7 +28,7 @@ export default function QtyStepper({ barcode, available, size = "sm" }: Props) {
     );
   } else if (qty === 0) {
     control = (
-      <button onClick={() => cart.add(barcode, 1)} className={`btn-primary w-full ${h}`}>
+      <button onClick={() => cart.addItem(barcode, 1, limit)} className={`btn-primary w-full ${h}`}>
         {lg ? "Add to cart" : "Add"}
       </button>
     );
@@ -37,7 +36,7 @@ export default function QtyStepper({ barcode, available, size = "sm" }: Props) {
     control = (
       <div className={`flex w-full items-stretch overflow-hidden rounded-xl border-2 border-brand bg-white ${h}`}>
         <button
-          onClick={() => (qty <= 1 ? cart.remove(barcode) : set(qty - 1))}
+          onClick={() => cart.setQty(barcode, qty - 1, limit)}
           className={`${sideW} shrink-0 font-semibold text-brand hover:bg-brand-light`}
           aria-label={qty <= 1 ? "Remove from cart" : "Decrease"}
         >
@@ -49,16 +48,20 @@ export default function QtyStepper({ barcode, available, size = "sm" }: Props) {
           aria-label="Quantity"
           onChange={(e) => {
             const s = e.target.value.replace(/\D/g, "");
-            // Empty is allowed while typing; anything else is shown and stored capped to 1..available.
-            setDraft(s && String(clamp(Number(s))));
-            if (s) set(Number(s));
+            if (!s) {
+              setDraft(""); // allow clearing while typing; blur restores the cart qty
+              return;
+            }
+            const n = Math.min(Math.max(1, Number(s)), limit); // above max snaps back to max
+            setDraft(String(n));
+            cart.setQty(barcode, n, limit);
           }}
           onBlur={() => setDraft(null)}
           className="w-full min-w-0 bg-transparent text-center font-semibold outline-none"
         />
         <button
-          onClick={() => set(qty + 1)}
-          disabled={atMax}
+          onClick={() => cart.setQty(barcode, qty + 1, limit)}
+          disabled={qty >= limit}
           className={`${sideW} shrink-0 font-semibold text-brand hover:bg-brand-light disabled:text-gray-300 disabled:hover:bg-transparent`}
           aria-label="Increase"
         >
@@ -68,7 +71,7 @@ export default function QtyStepper({ barcode, available, size = "sm" }: Props) {
     );
   }
 
-  const helper = qty === 0 ? "" : atMax ? `Max ${available} available` : `${qty} in cart`;
+  const helper = qty === 0 ? "" : atMax ? `Max ${limit} available` : `${qty} in cart`;
   return (
     <div>
       {control}

@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db, products, productImages, categories } from "@/lib/db";
 import { getPriceType } from "@/lib/auth";
-import { priceFor, type PriceType } from "@/lib/pricing";
+import { priceFor } from "@/lib/pricing";
 import { availableSql } from "@/lib/stock";
 
 /** Product as sent to the browser: ONE price field only, decided by the server. Keyed by barcode. */
@@ -33,30 +33,56 @@ const primaryImage = sql<string | null>`(
   order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc limit 1
 )`;
 
-const baseCols = {
-  barcode: products.barcode,
-  code: products.code,
-  name: products.name,
-  unit: products.unit,
-  retailPrice: products.retailPrice,
-  available: availableSql,
-  image: primaryImage,
-};
+type PublicRow = { product: PublicProduct; category: { name: string; slug: string } | null };
 
-function toPublic(
-  r: { barcode: string; code: string; name: string; unit: string; retailPrice: string; available: number; image: string | null },
-  pt: PriceType
-): PublicProduct {
-  return {
-    barcode: r.barcode,
-    code: r.code,
-    name: r.name,
-    unit: r.unit,
-    price: priceFor(r.retailPrice, pt),
-    available: Number(r.available),
-    inStock: Number(r.available) > 0,
-    image: r.image,
-  };
+/**
+ * The ONE query behind every product list the public site shows (home, catalogue, search,
+ * product page, cart, checkout). It always returns `available` as a JS number and the
+ * session's single price.
+ */
+async function queryPublicProducts(opts: {
+  where?: SQL;
+  orderBy?: SQL[];
+  limit?: number;
+  offset?: number;
+}): Promise<PublicRow[]> {
+  const pt = await getPriceType();
+  let q = db
+    .select({
+      barcode: products.barcode,
+      code: products.code,
+      name: products.name,
+      unit: products.unit,
+      retailPrice: products.retailPrice,
+      available: availableSql,
+      image: primaryImage,
+      categoryName: categories.name,
+      categorySlug: categories.slug,
+    })
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(opts.where ? and(listable, opts.where) : listable)
+    .orderBy(...(opts.orderBy ?? [asc(products.name), asc(products.barcode)]))
+    .$dynamic();
+  if (opts.limit !== undefined) q = q.limit(opts.limit);
+  if (opts.offset) q = q.offset(opts.offset);
+  const rows = await q;
+  return rows.map((r) => {
+    const available = Number(r.available) || 0;
+    return {
+      product: {
+        barcode: r.barcode,
+        code: r.code,
+        name: r.name,
+        unit: r.unit,
+        price: priceFor(r.retailPrice, pt),
+        available,
+        inStock: available > 0,
+        image: r.image,
+      },
+      category: r.categoryName && r.categorySlug ? { name: r.categoryName, slug: r.categorySlug } : null,
+    };
+  });
 }
 
 /** Search across name, ERP code and barcode. */
@@ -78,70 +104,50 @@ export async function getActiveCategories(): Promise<PublicCategory[]> {
 }
 
 export async function listProducts(opts: { q?: string; categoryId?: number; page?: number; pageSize?: number }) {
-  const pt = await getPriceType();
   const pageSize = opts.pageSize ?? 24;
   const page = Math.max(1, opts.page ?? 1);
-  const conds: SQL[] = [listable];
+  const conds: SQL[] = [];
   if (opts.q) conds.push(productSearch(opts.q));
   if (opts.categoryId) conds.push(eq(products.categoryId, opts.categoryId));
-  const where = and(...conds);
+  const where = conds.length ? and(...conds) : undefined;
 
-  const [[{ total }], rows] = await Promise.all([
-    db.select({ total: count() }).from(products).leftJoin(categories, eq(products.categoryId, categories.id)).where(where),
+  const [[{ total }], rows, priceType] = await Promise.all([
     db
-      .select(baseCols)
+      .select({ total: count() })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))
-      .where(where)
-      .orderBy(asc(products.name), asc(products.barcode))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize),
+      .where(where ? and(listable, where) : listable),
+    queryPublicProducts({ where, limit: pageSize, offset: (page - 1) * pageSize }),
+    getPriceType(),
   ]);
-  return { products: rows.map((r) => toPublic(r, pt)), total, pages: Math.max(1, Math.ceil(total / pageSize)), priceType: pt };
+  return { products: rows.map((r) => r.product), total, pages: Math.max(1, Math.ceil(total / pageSize)), priceType };
 }
 
 /** A few products for the home page, newest arrivals with images first. */
 export async function featuredProducts(limit = 8): Promise<PublicProduct[]> {
-  const pt = await getPriceType();
-  const rows = await db
-    .select(baseCols)
-    .from(products)
-    .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(listable)
-    .orderBy(sql`${primaryImage} is null`, sql`${products.lastReceived} desc nulls last`, asc(products.name))
-    .limit(limit);
-  return rows.map((r) => toPublic(r, pt));
+  const rows = await queryPublicProducts({
+    orderBy: [sql`${primaryImage} is null`, sql`${products.lastReceived} desc nulls last`, asc(products.name)],
+    limit,
+  });
+  return rows.map((r) => r.product);
 }
 
 export async function getProductsByBarcodes(barcodes: string[]): Promise<PublicProduct[]> {
   if (barcodes.length === 0) return [];
-  const pt = await getPriceType();
-  const rows = await db
-    .select(baseCols)
-    .from(products)
-    .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(and(listable, inArray(products.barcode, barcodes)));
-  return rows.map((r) => toPublic(r, pt));
+  const rows = await queryPublicProducts({ where: inArray(products.barcode, barcodes) });
+  return rows.map((r) => r.product);
 }
 
 export async function getProduct(barcode: string) {
-  const pt = await getPriceType();
-  const [r] = await db
-    .select({ ...baseCols, categoryName: categories.name, categorySlug: categories.slug })
-    .from(products)
-    .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(and(listable, eq(products.barcode, barcode)))
-    .limit(1);
+  const [[r], priceType] = await Promise.all([
+    queryPublicProducts({ where: eq(products.barcode, barcode), limit: 1 }),
+    getPriceType(),
+  ]);
   if (!r) return null;
   const images = await db
     .select({ publicId: productImages.publicId })
     .from(productImages)
     .where(eq(productImages.barcode, barcode))
     .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder));
-  return {
-    product: toPublic(r, pt),
-    images: images.map((i) => i.publicId),
-    category: r.categoryName ? { name: r.categoryName, slug: r.categorySlug! } : null,
-    priceType: pt,
-  };
+  return { product: r.product, images: images.map((i) => i.publicId), category: r.category, priceType };
 }

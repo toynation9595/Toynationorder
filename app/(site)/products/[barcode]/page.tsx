@@ -52,7 +52,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[barc
 
           <div className="mt-6">
             <div className="max-w-xs">
-              <QtyStepper barcode={p.barcode} available={p.available} size="lg" />
+              <QtyStepper barcode={p.barcode} max={p.available} size="lg" />
             </div>
           </div>
 
