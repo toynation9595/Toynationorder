@@ -3,7 +3,8 @@ import { SignJWT, jwtVerify } from "jose";
 export const SESSION_COOKIE = "tn_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
 
-export type SessionPayload = { uid: number; role: "owner" | "retailer" };
+export type Role = "owner" | "retailer" | "employee";
+export type SessionPayload = { uid: number; role: Role };
 
 function key() {
   const s = process.env.SESSION_SECRET;
@@ -24,7 +25,7 @@ export async function verifySession(token: string | undefined): Promise<SessionP
   try {
     const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
     if (typeof payload.uid !== "number") return null;
-    if (payload.role !== "owner" && payload.role !== "retailer") return null;
+    if (payload.role !== "owner" && payload.role !== "retailer" && payload.role !== "employee") return null;
     return { uid: payload.uid, role: payload.role };
   } catch {
     return null;

@@ -2,14 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { db, orders, ORDER_STATUSES, type OrderStatus } from "@/lib/db";
+import { db, orders } from "@/lib/db";
 import { requireOwner } from "@/lib/auth";
+import { OWNER_TRANSITIONS, ORDER_STATUSES, type OrderStatus } from "@/lib/order-statuses";
 
 export type UpdateOrderState = { error?: string; ok?: string; released?: boolean };
 
 /**
- * Plain status/notes update. Stock is already reserved when the order is placed (see lib/stock.ts),
- * so confirming needs no stock check; cancelling releases it because reservation is computed.
+ * Owner status/notes update. Packing happens in /staff; the owner may only cancel orders that are
+ * new, packing or packed, and move packed → dispatched (after ERP billing). Stock is computed, so
+ * cancelling releases it immediately.
  */
 export async function updateOrder(_prev: UpdateOrderState, form: FormData): Promise<UpdateOrderState> {
   await requireOwner();
@@ -20,6 +22,9 @@ export async function updateOrder(_prev: UpdateOrderState, form: FormData): Prom
 
   const [o] = await db.select({ status: orders.status }).from(orders).where(eq(orders.id, id));
   if (!o) return { error: "Order not found." };
+  if (status !== o.status && !OWNER_TRANSITIONS[o.status].includes(status)) {
+    return { error: `Cannot change a ${o.status} order to ${status}.` };
+  }
 
   const now = new Date();
   await db
@@ -28,13 +33,12 @@ export async function updateOrder(_prev: UpdateOrderState, form: FormData): Prom
       status,
       notes: notes || null,
       updatedAt: now,
-      ...(status !== o.status && status === "confirmed" ? { confirmedAt: now } : {}),
       ...(status !== o.status && status === "dispatched" ? { dispatchedAt: now } : {}),
     })
     .where(eq(orders.id, id));
 
-  revalidatePath("/", "layout"); // every page: stock, admin lists, my-orders
+  revalidatePath("/", "layout"); // every page: stock, admin lists, staff, my-orders
 
-  const released = status === "cancelled" && ["new", "confirmed", "packed"].includes(o.status);
+  const released = status === "cancelled" && ["new", "packing", "packed"].includes(o.status);
   return { ok: released ? "Saved. Stock released." : "Saved.", released };
 }

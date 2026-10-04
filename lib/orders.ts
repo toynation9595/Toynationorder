@@ -1,6 +1,6 @@
 import "server-only";
 import { asc, eq } from "drizzle-orm";
-import { db, orders, orderItems } from "@/lib/db";
+import { db, orders, orderItems, users } from "@/lib/db";
 import { formatINR, orderLabel } from "@/lib/format";
 
 export type OrderRow = typeof orders.$inferSelect;
@@ -20,6 +20,11 @@ export async function getOrderById(id: number) {
   if (!o) return null;
   const items = await db.select().from(orderItems).where(eq(orderItems.orderId, o.id)).orderBy(asc(orderItems.id));
   return { order: o, items };
+}
+
+export async function getUserName(id: number): Promise<string | null> {
+  const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, id));
+  return u?.name ?? null;
 }
 
 export function orderSummaryText(o: OrderRow, items: OrderItemRow[]): string {

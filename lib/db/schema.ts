@@ -21,7 +21,7 @@ export const users = pgTable("users", {
   shopName: text("shop_name").notNull().default(""),
   city: text("city").notNull().default(""),
   pinHash: text("pin_hash").notNull(),
-  role: text("role", { enum: ["owner", "retailer"] }).notNull(),
+  role: text("role", { enum: ["owner", "retailer", "employee"] }).notNull(),
   isActive: boolean("is_active").notNull().default(true),
   failedAttempts: integer("failed_attempts").notNull().default(0),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
@@ -88,13 +88,16 @@ export const orders = pgTable(
     city: text("city").notNull().default(""),
     priceType: text("price_type", { enum: ["retail", "wholesale"] }).notNull(),
     status: text("status", {
-      enum: ["new", "confirmed", "packed", "dispatched", "cancelled"],
+      enum: ["new", "packing", "packed", "dispatched", "cancelled"],
     })
       .notNull()
       .default("new"),
     total: numeric("total", { precision: 12, scale: 3 }).notNull(),
     notes: text("notes"),
-    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }), // legacy: no confirmation step any more
+    packedBy: integer("packed_by").references(() => users.id, { onDelete: "set null" }),
+    packingStartedAt: timestamp("packing_started_at", { withTimezone: true }),
+    packedAt: timestamp("packed_at", { withTimezone: true }),
     dispatchedAt: timestamp("dispatched_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -116,6 +119,8 @@ export const orderItems = pgTable(
     qty: integer("qty").notNull(),
     rate: numeric("rate", { precision: 12, scale: 3 }).notNull(),
     amount: numeric("amount", { precision: 12, scale: 3 }).notNull(),
+    packed: boolean("packed").notNull().default(false), // row done in the packing checklist (ticked or short)
+    packedQty: integer("packed_qty"), // set for short rows while packing; = qty for ticked rows once packed
   },
   (t) => [index("order_items_order_idx").on(t.orderId), index("order_items_barcode_idx").on(t.barcode)]
 );

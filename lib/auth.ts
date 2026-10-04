@@ -9,7 +9,7 @@ import type { PriceType } from "@/lib/pricing";
 
 export type CurrentUser = {
   id: number;
-  role: "owner" | "retailer";
+  role: "owner" | "retailer" | "employee";
   name: string;
   mobile: string;
   shopName: string;
@@ -48,6 +48,18 @@ export async function requireOwner(): Promise<CurrentUser> {
   const u = await getCurrentUser();
   if (!u || u.role !== "owner") redirect("/login?next=/admin/orders");
   return u;
+}
+
+/** Packing staff: employees, and the owner (who may also open /staff). */
+export async function requireStaff(): Promise<CurrentUser> {
+  const u = await getCurrentUser();
+  if (!u || (u.role !== "employee" && u.role !== "owner")) redirect("/login?next=/staff/orders");
+  return u;
+}
+
+/** Where each role lands after login. */
+export function homeFor(role: CurrentUser["role"]): string {
+  return role === "owner" ? "/admin/orders" : role === "employee" ? "/staff/orders" : "/products";
 }
 
 export async function requireRetailer(): Promise<CurrentUser> {

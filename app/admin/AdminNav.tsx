@@ -9,6 +9,8 @@ const LINKS = [
   { href: "/admin/import", label: "Import" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/retailers", label: "Retailers" },
+  { href: "/admin/employees", label: "Employees" },
+  { href: "/staff/orders", label: "Packing" },
 ];
 
 export default function AdminNav() {

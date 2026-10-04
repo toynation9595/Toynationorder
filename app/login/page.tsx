@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, homeFor } from "@/lib/auth";
 import LogoTile from "@/components/LogoTile";
 import LoginForm from "./LoginForm";
 
@@ -10,7 +10,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const sp = await searchParams;
   const next = typeof sp.next === "string" ? sp.next : "";
   const user = await getCurrentUser();
-  if (user) redirect(user.role === "owner" ? "/admin/orders" : "/products");
+  if (user) redirect(homeFor(user.role));
 
   return (
     <main className="flex flex-1 items-center justify-center bg-brand-light/50 px-4 py-12">

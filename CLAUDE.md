@@ -26,7 +26,8 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 ## Roles & pricing (CRITICAL)
 - guest: no account, sees RETAIL price (owner also sees retail on the public site).
 - retailer: created by owner only (no self-registration). Logs in with mobile + PIN. Active retailer sees WHOLESALE price.
-- owner: full admin.
+- owner: full admin; may also open `/staff/*`.
+- employee: created by owner only (Admin → Employees). Logs in with mobile + PIN, lands on `/staff/orders`, and can use ONLY `/staff/*` (proxy.ts redirects everything else). Packs orders; never sees customer mobile numbers (not selected on the server).
 - The ERP Sales Price is the WHOLESALE rate: Wholesale price = `products.wholesale_price`.
 - Retail price = wholesale_price × 2 (constant `RETAIL_MULTIPLIER = 2` in `lib/pricing.ts`, applied by `priceFor()`). NO rounding: keep the exact value (store rates/amounts as numeric(12,3)); display with paise, e.g. ₹42.50.
 - Price is decided ON THE SERVER from the session. Product data sent to the browser contains ONE field `price` only. Never send both prices to the browser, and never send the wholesale price to a guest. Admin products shows both (Wholesale and Retail ×2).
@@ -36,12 +37,12 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 - Mobile numbers: India only, default +91. Users type 10 digits (validate `^[6-9]\d{9}$`), store 10 digits, show "+91" as a fixed prefix in inputs. WhatsApp links use `91` + number.
 
 ## Database (Drizzle schema)
-- users: id, mobile (unique, text), name, shop_name, city, pin_hash, role ('owner'|'retailer'), is_active (bool, default true), failed_attempts (int), locked_until (timestamp null), created_at
+- users: id, mobile (unique, text), name, shop_name, city, pin_hash, role ('owner'|'retailer'|'employee'), is_active (bool, default true), failed_attempts (int), locked_until (timestamp null), created_at
 - categories: id, name, slug (unique), sort_order, is_active, created_at
 - products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), erp_name (from import), display_name (text null, owner override), description (text null), unit (text, as in ERP), wholesale_price (numeric 10,2 – ERP Sales Price), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
 - product_images: id, barcode (fk products.barcode), public_id, is_primary (bool), sort_order, created_at
-- orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'confirmed'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), confirmed_at (timestamp null), dispatched_at (timestamp null), created_at, updated_at
-- order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time
+- orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'packing'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), packed_by (user id null), packing_started_at (timestamp null), packed_at (timestamp null), dispatched_at (timestamp null), confirmed_at (legacy, unused), created_at, updated_at
+- order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time; packed (bool default false), packed_qty (int null)
 
 - settings: key (text pk), value (text), updated_at — holds `last_import_at` (ISO timestamp of the last successful ERP import)
 
@@ -68,14 +69,22 @@ Source: stock report .xlsx from the ERP (single sheet).
 - Shown name = display_name ?? cleanName(erp_name), used everywhere (cards, product page, cart, checkout, order items snapshot, WhatsApp). `shownNameSql` in lib/catalog.ts mirrors it for sorting.
 - Search matches display_name, erp_name, code and barcode. Admin products edits display name (Reset to auto clears it) and description; the product page shows the description.
 
+## Order statuses & packing (no confirmation step)
+- Flow: new → packing → packed → dispatched, plus cancelled. Statuses, labels and owner transitions live in lib/order-statuses.ts. Retailers see 'packing' as "Being packed".
+- Packing (`/staff/orders/[id]`, server actions in app/staff/orders/actions.ts; every action locks the order row FOR UPDATE):
+  - "Start packing": only on 'new' orders; sets status 'packing', packed_by, packing_started_at. If someone else already started → "Being packed by {name}", blocked. Only packed_by may change the checklist.
+  - Checklist: each tick saves immediately (packed = true). "Short" sets packed_qty (0..qty) and marks the row done. Unticking clears both.
+  - "Finish packing" only when every row is ticked or short: packed_qty = qty for ticked rows, status 'packed', packed_at.
+- Owner (admin): may cancel orders that are new, packing or packed, and move packed → dispatched after ERP billing (sets dispatched_at). Nothing else. Admin shows packed by / packed at and highlights short items (ordered vs packed) in amber.
+
 ## Stock reservation (lib/stock.ts)
-- Stock is reserved when an order is PLACED. Nothing is stored; reservation is computed: reserved(barcode) = SUM(order_items.qty) where the order status is 'new', 'confirmed' or 'packed', OR status is 'dispatched' and dispatched_at > last_import_at (the ERP stock does not include it yet). Cancelled orders never count, so cancelling releases stock automatically.
+- Stock is reserved when an order is PLACED. Nothing is stored; reservation is computed: reserved(barcode) = SUM over orders whose status is 'new', 'packing' or 'packed', OR status is 'dispatched' and dispatched_at > last_import_at (the ERP stock does not include it yet). Quantity is order_items.qty, except 'packed'/'dispatched' use COALESCE(packed_qty, qty), so short items release stock. Cancelled orders never count, so cancelling releases stock automatically.
 - available = max(0, floor(stock_qty − reserved)).
 - Orders set confirmed_at when they become 'confirmed' and dispatched_at when they become 'dispatched'.
 - Public catalogue, category counts and product pages use `available`: products with available = 0 are hidden. Admin products shows them all with Stock / Reserved / Available columns.
 - Cart and checkout cap qty at available and show "Only X available".
 - Order placement (checkout server action) runs in ONE DB transaction on the Neon Pool (websocket) driver — never the HTTP driver: lock the affected product rows (SELECT … FOR UPDATE, in barcode order), recompute available for every line, reject with a per-item "Only X available" message if any line exceeds it, otherwise insert the order and its items in the same transaction.
-- Admin status changes (incl. → 'confirmed') are plain updates with no stock check; stock is already reserved.
+- Admin status changes are plain updates with no stock check; stock is already reserved.
 - revalidatePath('/', 'layout') after order placement, every status change and every ERP import.
 
 ## Design
@@ -90,7 +99,8 @@ Source: stock report .xlsx from the ERP (single sheet).
 ## Pages
 Public: `/` (hero with logo, About Toy Nation, category tiles, a few products) · `/products` (grid, category filter, search by name/code/barcode) · `/products/[barcode]` (image gallery, details, qty, add to cart) · `/cart` · `/checkout` · `/order-placed/[orderNo]` · `/login`
 Retailer: `/my-orders` · `/my-orders/[orderNo]`
-Owner (`/admin/*`, role-guarded in middleware): orders · order detail · products · import · categories · retailers
+Owner (`/admin/*`, role-guarded in proxy.ts): orders · order detail · products · import · categories · retailers · employees
+Staff (`/staff/*`, employee or owner): `/staff/orders` (tabs To pack / Packing / Packed / All) · `/staff/orders/[id]` (packing checklist)
 
 ## Build plan
 

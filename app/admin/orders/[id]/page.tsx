@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrderById, waLink } from "@/lib/orders";
+import { getOrderById, getUserName, waLink } from "@/lib/orders";
 import { formatDateTime, orderLabel } from "@/lib/format";
 import OrderItemsTable from "@/components/OrderItemsTable";
 import StatusBadge from "@/components/StatusBadge";
@@ -11,6 +11,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
   const data = await getOrderById(Number(id));
   if (!data) notFound();
   const { order: o, items } = data;
+  const packer = o.packedBy ? await getUserName(o.packedBy) : null;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -24,7 +25,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
 
       <div className="grid gap-5 md:grid-cols-[1fr_300px]">
         <div className="card p-5">
-          <OrderItemsTable items={items} total={o.total} />
+          <OrderItemsTable items={items} total={o.total} showPacked={o.status === "packed" || o.status === "dispatched" || o.status === "packing"} />
         </div>
 
         <div className="space-y-5">
@@ -47,6 +48,16 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
               </a>
             </div>
           </div>
+
+          {(packer || o.packedAt) && (
+            <div className="card space-y-1 p-5 text-sm">
+              <h2 className="mb-1 text-base font-semibold text-brand-dark">Packing</h2>
+              {packer && <div><span className="text-gray-500">Packed by:</span> {packer}</div>}
+              {o.packingStartedAt && <div><span className="text-gray-500">Started:</span> {formatDateTime(o.packingStartedAt)}</div>}
+              {o.packedAt && <div><span className="text-gray-500">Packed at:</span> {formatDateTime(o.packedAt)}</div>}
+              {o.dispatchedAt && <div><span className="text-gray-500">Dispatched:</span> {formatDateTime(o.dispatchedAt)}</div>}
+            </div>
+          )}
 
           <OrderStatusForm id={o.id} status={o.status} notes={o.notes ?? ""} />
         </div>

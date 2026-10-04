@@ -58,8 +58,9 @@ export async function loginAction(_prev: LoginState, form: FormData): Promise<Lo
   });
 
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "";
-  if (u.role === "owner") redirect(safeNext.startsWith("/admin") ? safeNext : "/admin/orders");
-  redirect(safeNext && !safeNext.startsWith("/admin") ? safeNext : "/products");
+  if (u.role === "owner") redirect(safeNext.startsWith("/admin") || safeNext.startsWith("/staff") ? safeNext : "/admin/orders");
+  if (u.role === "employee") redirect(safeNext.startsWith("/staff") ? safeNext : "/staff/orders");
+  redirect(safeNext && !safeNext.startsWith("/admin") && !safeNext.startsWith("/staff") ? safeNext : "/products");
 }
 
 export async function logoutAction() {

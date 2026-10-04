@@ -41,6 +41,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         status: orders.status,
         total: orders.total,
         createdAt: orders.createdAt,
+        packedAt: orders.packedAt,
+        packedBy: sql<string | null>`(select u.name from users u where u.id = "orders"."packed_by")`,
         items: sql<number>`(select count(*)::int from ${orderItems} where ${orderItems.orderId} = ${orders.id})`,
       })
       .from(orders)
@@ -88,7 +90,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
               <th className="px-4 py-3">Order</th>
@@ -97,11 +99,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
               <th className="px-4 py-3 text-right">Items</th>
               <th className="px-4 py-3 text-right">Total</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Packed</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-gray-500">No orders found.</td></tr>
+              <tr><td colSpan={7} className="p-8 text-center text-gray-500">No orders found.</td></tr>
             )}
             {rows.map((o) => (
               <tr key={o.id} className="hover:bg-brand-light/40">
@@ -119,6 +122,16 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                 <td className="px-4 py-3 text-right tabular-nums">{o.items}</td>
                 <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatINR(o.total)}</td>
                 <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
+                <td className="px-4 py-3 text-xs text-gray-600">
+                  {o.packedBy ? (
+                    <>
+                      <div className="font-medium text-gray-800">{o.packedBy}</div>
+                      <div>{o.packedAt ? formatDateTime(o.packedAt) : "in progress"}</div>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

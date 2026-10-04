@@ -40,7 +40,7 @@ export default async function MyOrdersPage() {
                 </div>
               </div>
               <div className="font-semibold tabular-nums">{formatINR(o.total)}</div>
-              <StatusBadge status={o.status} />
+              <StatusBadge status={o.status} forRetailer />
             </Link>
           ))}
         </div>

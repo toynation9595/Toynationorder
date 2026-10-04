@@ -6,8 +6,10 @@ import { shownName } from "@/lib/productName";
 /**
  * Stock reservation rules.
  * Stock is reserved when an order is PLACED.
- * reserved(barcode) = SUM(order_items.qty) over orders that are 'new', 'confirmed' or 'packed',
+ * reserved(barcode) = SUM over orders that are 'new', 'packing' or 'packed',
  *   or 'dispatched' with dispatched_at > last_import_at (the ERP stock does not reflect them yet).
+ * Quantity: order_items.qty, except 'packed'/'dispatched' use COALESCE(packed_qty, qty) so short
+ *   items release the missing units.
  * available = max(0, floor(stock_qty − reserved)).
  * Nothing is stored: cancelling an order releases its stock automatically.
  */
@@ -18,10 +20,11 @@ export const LAST_IMPORT_KEY = "last_import_at";
  * of single-table queries, which would make "id"/"barcode" ambiguous inside this correlated subquery.
  */
 const reservedRaw = `coalesce((
-  select sum(oi.qty) from order_items oi
+  select sum(case when o.status in ('packed', 'dispatched') then coalesce(oi.packed_qty, oi.qty) else oi.qty end)
+  from order_items oi
   join orders o on o.id = oi.order_id
   where oi.barcode = "products"."barcode"
-    and (o.status in ('new', 'confirmed', 'packed')
+    and (o.status in ('new', 'packing', 'packed')
       or (o.status = 'dispatched' and o.dispatched_at > coalesce(
         (select s.value::timestamptz from settings s where s.key = '${LAST_IMPORT_KEY}'),
         '-infinity'::timestamptz)))

@@ -19,7 +19,7 @@ export default async function MyOrderPage({ params }: PageProps<"/my-orders/[ord
       <Link href="/my-orders" className="text-sm text-gray-500 hover:text-brand">← My orders</Link>
       <div className="mt-2 mb-5 flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-semibold text-brand-dark">{orderLabel(o.orderNo)}</h1>
-        <StatusBadge status={o.status} />
+        <StatusBadge status={o.status} forRetailer />
         <span className="ml-auto text-sm text-gray-500">{formatDateTime(o.createdAt)}</span>
       </div>
       <div className="card space-y-4 p-5">
