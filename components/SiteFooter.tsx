@@ -1,8 +1,8 @@
 import Link from "next/link";
 import LogoTile from "./LogoTile";
+import ContactButtons, { ADDRESS, BUSINESS_HOURS } from "./ContactButtons";
 
-export const ADDRESS =
-  "Rajneel Square, Near Indian Oil Pump, Mumbai-Agra Service Road, Ojhar (MIG), Nashik, Maharashtra 422207";
+export { ADDRESS };
 
 export default function SiteFooter() {
   return (
@@ -18,6 +18,8 @@ export default function SiteFooter() {
         <div className="text-sm">
           <div className="mb-1 font-semibold text-white">Visit us</div>
           <address className="not-italic leading-relaxed">{ADDRESS}</address>
+          {BUSINESS_HOURS && <p className="mt-2">🕘 {BUSINESS_HOURS}</p>}
+          <ContactButtons tone="dark" className="mt-3" />
         </div>
         <div className="text-sm">
           <div className="mb-1 font-semibold text-white">Shop</div>

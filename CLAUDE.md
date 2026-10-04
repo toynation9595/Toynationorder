@@ -20,6 +20,7 @@ Address (footer/About): Rajneel Square, Near Indian Oil Pump, Mumbai-Agra Servic
 ## Env vars
 DATABASE_URL, SESSION_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, NEXT_PUBLIC_OWNER_WHATSAPP (10-digit mobile; app prefixes 91),
+NEXT_PUBLIC_CONTACT_PHONE (10 digits; Call button), NEXT_PUBLIC_BUSINESS_HOURS (free text; hidden when empty),
 OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 
 ## Roles & pricing (CRITICAL)

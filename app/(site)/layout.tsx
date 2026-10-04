@@ -1,5 +1,6 @@
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import MobileCartBar from "@/components/MobileCartBar";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <MobileCartBar />
     </>
   );
 }
