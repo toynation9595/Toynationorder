@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { db, orders, orderItems } from "@/lib/db";
 import { getCurrentUser, getPriceType } from "@/lib/auth";
 import { getProductsByBarcodes } from "@/lib/catalog";
@@ -22,7 +23,7 @@ const r3 = (n: number) => Math.round(n * 1000) / 1000;
 class StockError extends Error {}
 
 function shortMessage(name: string, qty: number, available: number) {
-  return available > 0 ? `${name}: only ${available} available (you ordered ${qty})` : `${name} is out of stock`;
+  return available > 0 ? `${name}: Only ${available} available (you ordered ${qty})` : `${name}: out of stock`;
 }
 
 export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> {
@@ -65,7 +66,8 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
   let orderNo: number;
   try {
     orderNo = await db.transaction(async (tx) => {
-      // Authoritative re-check with the product rows locked.
+      // Placing the order reserves its stock, so this check is authoritative: lock the product
+      // rows (SELECT … FOR UPDATE, Pool/websocket driver), recompute available, insert in the same tx.
       const avail = await lockAvailability(tx, items.map((i) => i.barcode));
       const short = items.filter((i) => i.qty > (avail.get(i.barcode)?.available ?? 0));
       if (short.length) {
@@ -96,5 +98,6 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
   }
 
   await rememberPlacedOrder(orderNo);
+  revalidatePath("/", "layout"); // stock just changed for everyone
   return { orderNo };
 }

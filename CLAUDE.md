@@ -68,12 +68,14 @@ Source: stock report .xlsx from the ERP (single sheet).
 - Search matches display_name, erp_name, code and barcode. Admin products edits display name (Reset to auto clears it) and description; the product page shows the description.
 
 ## Stock reservation (lib/stock.ts)
-- Nothing is stored; reservation is computed. reserved(barcode) = SUM(order_items.qty) where the order status is 'confirmed' or 'packed', OR status is 'dispatched' and dispatched_at > last_import_at (the ERP stock does not include it yet).
-- available = max(0, floor(stock_qty − reserved)). Cancelling an order releases its stock automatically.
+- Stock is reserved when an order is PLACED. Nothing is stored; reservation is computed: reserved(barcode) = SUM(order_items.qty) where the order status is 'new', 'confirmed' or 'packed', OR status is 'dispatched' and dispatched_at > last_import_at (the ERP stock does not include it yet). Cancelled orders never count, so cancelling releases stock automatically.
+- available = max(0, floor(stock_qty − reserved)).
 - Orders set confirmed_at when they become 'confirmed' and dispatched_at when they become 'dispatched'.
 - Public catalogue, category counts and product pages use `available`: products with available = 0 are hidden. Admin products shows them all with Stock / Reserved / Available columns.
-- Cart and checkout cap qty at available and show "Only X available". On submit the server locks the product rows and re-checks every line; it rejects with a per-item message if qty > available. A new order does not reserve stock.
-- Admin: moving an order into a stock-holding status (confirmed/packed/dispatched from new/cancelled) runs in a DB transaction on the Neon Pool (websocket) driver — never the HTTP driver — that locks the order and the affected product rows (SELECT … FOR UPDATE, in barcode order), re-checks available for every line, and blocks the change listing the short items.
+- Cart and checkout cap qty at available and show "Only X available".
+- Order placement (checkout server action) runs in ONE DB transaction on the Neon Pool (websocket) driver — never the HTTP driver: lock the affected product rows (SELECT … FOR UPDATE, in barcode order), recompute available for every line, reject with a per-item "Only X available" message if any line exceeds it, otherwise insert the order and its items in the same transaction.
+- Admin status changes (incl. → 'confirmed') are plain updates with no stock check; stock is already reserved.
+- revalidatePath('/', 'layout') after order placement, every status change and every ERP import.
 
 ## Design
 - Professional, playful-but-clean toy brand. White dominant background.
@@ -101,7 +103,7 @@ Owner (`/admin/*`, role-guarded in middleware): orders · order detail · produc
 
 ### Day 2 – Ordering + accounts
 1. Cart in localStorage (stores product barcode + qty only; entries without a barcode are ignored). Cart page fetches current prices from server.
-2. `/checkout`: guest enters name, shop name, mobile (10 digits), city; logged-in retailer sees their details prefilled. Server recalculates prices, re-checks available stock, creates order + items, clears cart.
+2. `/checkout`: guest enters name, shop name (optional), mobile (10 digits), city; logged-in retailer sees their details prefilled. Server recalculates prices, locks and re-checks available stock, creates order + items (which reserves the stock), clears cart.
 3. `/order-placed/[orderNo]`: confirmation + "Send on WhatsApp" button → `https://wa.me/<NEXT_PUBLIC_OWNER_WHATSAPP>?text=<encoded order summary>` (order no, customer, shop, city, mobile, items × qty × rate, total).
 4. `/admin/orders`: list newest first, filter by status, search by order no / mobile / shop. `/admin/orders/[id]`: full detail, status dropdown, notes, link to call/WhatsApp the customer.
 5. `/admin/retailers`: add retailer (mobile, name, shop, city, PIN), edit, reset PIN, activate/deactivate.

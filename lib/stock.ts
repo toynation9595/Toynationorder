@@ -5,7 +5,8 @@ import { shownName } from "@/lib/productName";
 
 /**
  * Stock reservation rules.
- * reserved(barcode) = SUM(order_items.qty) over orders that are 'confirmed' or 'packed',
+ * Stock is reserved when an order is PLACED.
+ * reserved(barcode) = SUM(order_items.qty) over orders that are 'new', 'confirmed' or 'packed',
  *   or 'dispatched' with dispatched_at > last_import_at (the ERP stock does not reflect them yet).
  * available = max(0, floor(stock_qty − reserved)).
  * Nothing is stored: cancelling an order releases its stock automatically.
@@ -20,7 +21,7 @@ const reservedRaw = `coalesce((
   select sum(oi.qty) from order_items oi
   join orders o on o.id = oi.order_id
   where oi.barcode = "products"."barcode"
-    and (o.status in ('confirmed', 'packed')
+    and (o.status in ('new', 'confirmed', 'packed')
       or (o.status = 'dispatched' and o.dispatched_at > coalesce(
         (select s.value::timestamptz from settings s where s.key = '${LAST_IMPORT_KEY}'),
         '-infinity'::timestamptz)))
@@ -31,9 +32,6 @@ export const reservedSql = sql<number>`${sql.raw(reservedRaw)}`;
 
 /** Available qty for the current `products` row. */
 export const availableSql = sql<number>`${sql.raw(`greatest(0, floor("products"."stock_qty" - ${reservedRaw}))::int`)}`;
-
-/** Statuses that hold stock (dispatched only until the next import). */
-export const RESERVING_STATUSES = ["confirmed", "packed", "dispatched"] as const;
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
