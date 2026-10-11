@@ -126,10 +126,11 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
             })}
           </ul>
         )}
-        <div className="mt-4 flex items-baseline justify-between border-t border-gray-100 pt-3">
-          <span className="font-medium">Total <span className="text-xs font-normal text-gray-500">({priceLabel})</span></span>
-          <span className="font-heading text-2xl font-semibold text-brand-dark">{formatINR(total)}</span>
+        <div className="mt-4 flex items-baseline justify-between border-t border-gray-100 pt-3 text-base">
+          <span>Estimated total <span className="text-xs text-gray-500">({priceLabel})</span></span>
+          <span className="tabular-nums">{formatINR(total)}</span>
         </div>
+        <p className="mt-0.5 text-xs text-gray-500">Final bill after packing</p>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         {blocked && (
           <p className="mt-3 text-xs text-red-600">

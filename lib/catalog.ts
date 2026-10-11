@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db, products, productImages, categories } from "@/lib/db";
 import { getPriceType } from "@/lib/auth";
 import { priceFor } from "@/lib/pricing";
@@ -175,6 +175,39 @@ export async function featuredProducts(limit = 8): Promise<PublicProduct[]> {
     limit,
   });
   return rows.map((r) => r.product);
+}
+
+/**
+ * "You may also like" for the cart: in-stock products from the cart items' categories (newest first),
+ * topped up with newest arrivals; never anything already in the cart.
+ */
+export async function recommendedProducts(cartBarcodes: string[], limit = 6): Promise<PublicProduct[]> {
+  const exclude = [...new Set(cartBarcodes)];
+  const notInCart = exclude.length ? notInArray(products.barcode, exclude) : undefined;
+  const newest = [sql`${primaryImage} is null`, sql`${products.lastReceived} desc nulls last`, asc(shownNameSql)];
+
+  const cats = exclude.length
+    ? (
+        await db
+          .selectDistinct({ id: products.categoryId })
+          .from(products)
+          .where(and(inArray(products.barcode, exclude), isNotNull(products.categoryId)))
+      ).map((r) => r.id!)
+    : [];
+
+  const picked = cats.length
+    ? (await queryPublicProducts({ where: and(inArray(products.categoryId, cats), notInCart), orderBy: newest, limit })).map((r) => r.product)
+    : [];
+  if (picked.length < limit) {
+    const skip = [...exclude, ...picked.map((p) => p.barcode)];
+    const more = await queryPublicProducts({
+      where: skip.length ? notInArray(products.barcode, skip) : undefined,
+      orderBy: newest,
+      limit: limit - picked.length,
+    });
+    picked.push(...more.map((r) => r.product));
+  }
+  return picked;
 }
 
 export async function getProductsByBarcodes(barcodes: string[]): Promise<PublicProduct[]> {

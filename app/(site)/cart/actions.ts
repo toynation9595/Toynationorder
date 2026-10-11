@@ -1,6 +1,6 @@
 "use server";
 
-import { getProductsByBarcodes } from "@/lib/catalog";
+import { getProductsByBarcodes, recommendedProducts } from "@/lib/catalog";
 import { getCurrentUser } from "@/lib/auth";
 import { getCartLines, writeCartQtys, type CartLine } from "@/lib/user-cart";
 
@@ -8,6 +8,12 @@ import { getCartLines, writeCartQtys, type CartLine } from "@/lib/user-cart";
 export async function getCartProducts(barcodes: string[]) {
   if (!Array.isArray(barcodes)) return [];
   return getProductsByBarcodes(barcodes.filter((b) => typeof b === "string").slice(0, 500));
+}
+
+/** "You may also like" row on the cart page. */
+export async function getRecommendations(cartBarcodes: string[]) {
+  if (!Array.isArray(cartBarcodes)) return [];
+  return recommendedProducts(cartBarcodes.filter((b) => typeof b === "string").slice(0, 200), 6);
 }
 
 /* Retailer cart: the user always comes from the session, never from the client. */

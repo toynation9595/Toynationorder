@@ -7,14 +7,15 @@ import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/format";
 import { cldUrl } from "@/lib/images";
 import type { PublicProduct } from "@/lib/catalog";
-import { ProductImagePlaceholder } from "@/components/ProductCard";
+import ProductCard, { ProductImagePlaceholder } from "@/components/ProductCard";
 import QtyStepper from "@/components/QtyStepper";
-import { getCartProducts } from "./actions";
+import { getCartProducts, getRecommendations } from "./actions";
 
 export default function CartView({ priceLabel }: { priceLabel: string }) {
   const { enabled, lines, getLines, setQty, remove } = useCart();
   const [prices, setPrices] = useState<Map<string, PublicProduct> | null>(null);
   const [reduced, setReduced] = useState<string[]>([]);
+  const [recs, setRecs] = useState<{ key: string; products: PublicProduct[] } | null>(null);
   const codesKey = lines.map((l) => l.barcode).sort().join("|");
 
   useEffect(() => {
@@ -45,6 +46,18 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
     };
   }, [codesKey, getLines, setQty]);
 
+  // "You may also like": same categories as the cart (fallback newest arrivals), not already in the cart.
+  useEffect(() => {
+    if (!codesKey) return;
+    let alive = true;
+    getRecommendations(codesKey.split("|"))
+      .then((products) => alive && setRecs({ key: codesKey, products }))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [codesKey]);
+
   if (!enabled) {
     return <div className="card p-10 text-center text-gray-600">Staff and owner accounts don’t have a cart.</div>;
   }
@@ -63,6 +76,8 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
     return { line: l, p, ok: !!p && l.qty <= p.available };
   });
   const blocked = rows.some((r) => !r.ok);
+  const inCart = new Set(lines.map((l) => l.barcode));
+  const suggestions = (recs?.products ?? []).filter((p) => !inCart.has(p.barcode)).slice(0, 6);
   const total = rows.reduce((s, r) => s + (r.ok && r.p ? r.p.price * r.line.qty : 0), 0);
 
   return (
@@ -124,10 +139,11 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
             <span>{lines.length} item{lines.length > 1 ? "s" : ""}</span>
             <span>{priceLabel}</span>
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-medium">Total</span>
-            <span className="font-heading text-2xl font-semibold text-brand-dark">{formatINR(total)}</span>
+          <div className="mt-2 flex items-baseline justify-between text-base">
+            <span>Estimated total</span>
+            <span className="tabular-nums">{formatINR(total)}</span>
           </div>
+          <p className="mt-0.5 text-xs text-gray-500">Final bill after packing</p>
           {blocked && <p className="mt-3 text-xs text-red-600">Remove unavailable items to continue.</p>}
           {blocked ? (
             <button disabled className="btn-primary mt-4 w-full">Proceed to checkout</button>
@@ -137,6 +153,19 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
           <Link href="/products" className="mt-3 block text-center text-sm font-medium text-brand hover:underline">Continue shopping</Link>
         </div>
       </div>
+
+      {suggestions.length > 0 && (
+        <section className="pt-4">
+          <h2 className="mb-3 text-xl font-semibold text-brand-dark">You may also like</h2>
+          <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+            {suggestions.map((p) => (
+              <div key={p.barcode} className="w-40 shrink-0 snap-start sm:w-48">
+                <ProductCard p={p} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
