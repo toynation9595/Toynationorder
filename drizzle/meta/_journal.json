@@ -50,6 +50,13 @@
       "when": 1791091663459,
       "tag": "0006_packing_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791699005877,
+      "tag": "0007_cart_items",
+      "breakpoints": true
     }
   ]
 }

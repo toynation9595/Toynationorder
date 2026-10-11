@@ -9,6 +9,7 @@ import {
   numeric,
   date,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -123,6 +124,22 @@ export const orderItems = pgTable(
     packedQty: integer("packed_qty"), // set for short rows while packing; = qty for ticked rows once packed
   },
   (t) => [index("order_items_order_idx").on(t.orderId), index("order_items_barcode_idx").on(t.barcode)]
+);
+
+/** Server-side cart for logged-in retailers (guests keep theirs in localStorage). */
+export const cartItems = pgTable(
+  "cart_items",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    barcode: text("barcode")
+      .notNull()
+      .references(() => products.barcode, { onDelete: "cascade", onUpdate: "cascade" }),
+    qty: integer("qty").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.barcode] })] // unique (user_id, barcode)
 );
 
 /** Key/value app settings, e.g. last_import_at (ISO timestamp of the last successful ERP import). */

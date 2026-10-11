@@ -16,15 +16,17 @@ const cache = new Map<string, { at: number; promise: Promise<Map<string, PublicP
 function pricesFor(key: string) {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.promise;
-  const promise = getCartProducts(key.split("|")).then((ps) => new Map(ps.map((p) => [p.barcode, p])));
+  const promise = getCartProducts(key.slice(key.indexOf("#") + 1).split("|")).then((ps) => new Map(ps.map((p) => [p.barcode, p])));
   promise.catch(() => cache.delete(key));
   cache.set(key, { at: Date.now(), promise });
   return promise;
 }
 
-export function useCartSummary(): { count: number; total: number; ready: boolean } {
-  const lines = useCart();
-  const key = lines.map((l) => l.barcode).sort().join("|");
+export function useCartSummary(): { count: number; total: number; ready: boolean; enabled: boolean } {
+  const { lines, who, enabled } = useCart();
+  const codes = lines.map((l) => l.barcode).sort().join("|");
+  // Prices depend on who is signed in (retail vs wholesale), so the cache key includes the identity.
+  const key = codes ? `${who}#${codes}` : "";
   const [loaded, setLoaded] = useState<{ key: string; prices: Map<string, PublicProduct> } | null>(null);
 
   useEffect(() => {
@@ -44,5 +46,5 @@ export function useCartSummary(): { count: number; total: number; ready: boolean
     const p = prices?.get(l.barcode);
     if (p) total += p.price * Math.min(l.qty, p.available);
   }
-  return { count: lines.length, total, ready: !key || prices !== null };
+  return { count: lines.length, total, ready: !key || prices !== null, enabled };
 }

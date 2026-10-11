@@ -1,23 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { cart, useCart } from "@/lib/cart";
+import { useCart } from "@/lib/cart";
 
 type Props = { barcode: string; max: number; size?: "sm" | "lg" };
 
 /**
- * Shared Add / [− qty +] control bound to the localStorage cart.
+ * Shared Add / [− qty +] control bound to the cart context (guest localStorage or retailer cart_items).
  * `max` is the available stock; the cart store itself clamps every write to 0..max.
  * Always renders the helper line so cards keep the same height in every state.
  */
 export default function QtyStepper({ barcode, max, size = "sm" }: Props) {
   const limit = Math.max(0, Math.floor(Number(max) || 0));
-  const qty = useCart().find((l) => l.barcode === barcode)?.qty ?? 0;
+  const cart = useCart();
+  const qty = cart.lines.find((l) => l.barcode === barcode)?.qty ?? 0;
   const [draft, setDraft] = useState<string | null>(null);
   const lg = size === "lg";
   const h = lg ? "h-12 text-base" : "h-9 text-sm";
   const sideW = lg ? "w-14" : "w-9";
   const atMax = qty > 0 && qty >= limit;
+
+  if (!cart.enabled) return null; // owner / employee: no cart
 
   let control: React.ReactNode;
   if (limit === 0) {

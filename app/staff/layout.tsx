@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
-import { logoutAction } from "@/app/login/actions";
+import LogoutButton from "@/components/LogoutButton";
 import LogoTile from "@/components/LogoTile";
 
 export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
@@ -18,9 +18,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
             {me.role === "owner" && (
               <Link href="/admin/orders" className="rounded-lg px-3 py-1.5 hover:bg-white/10">Admin</Link>
             )}
-            <form action={logoutAction}>
-              <button className="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Logout</button>
-            </form>
+            <LogoutButton className="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20" />
           </div>
         </div>
       </header>

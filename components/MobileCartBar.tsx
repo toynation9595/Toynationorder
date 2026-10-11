@@ -8,8 +8,8 @@ import { formatINR } from "@/lib/format";
 /** Mobile-only (<768px) sticky cart bar on public pages, hidden on /cart and /checkout. */
 export default function MobileCartBar() {
   const path = usePathname();
-  const { count, total, ready } = useCartSummary();
-  if (count === 0 || path.startsWith("/cart") || path.startsWith("/checkout")) return null;
+  const { count, total, ready, enabled } = useCartSummary();
+  if (!enabled || count === 0 || path.startsWith("/cart") || path.startsWith("/checkout")) return null;
 
   return (
     <>

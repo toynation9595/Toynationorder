@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { cart, useCart } from "@/lib/cart";
+import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/format";
 import type { PublicProduct } from "@/lib/catalog";
 import MobileInput from "@/components/MobileInput";
@@ -13,7 +13,7 @@ import { placeOrder } from "./actions";
 type Prefill = { name: string; shopName: string; mobile: string; city: string } | null;
 
 export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill; priceLabel: string }) {
-  const lines = useCart();
+  const { enabled, lines, clear } = useCart();
   const router = useRouter();
   const [prices, setPrices] = useState<Map<string, PublicProduct> | null>(null);
   const [error, setError] = useState("");
@@ -32,6 +32,9 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
     };
   }, [codesKey, refresh]);
 
+  if (!enabled) {
+    return <div className="card p-10 text-center text-gray-600">Staff and owner accounts can’t place orders.</div>;
+  }
   if (lines.length === 0 && !placed) {
     return (
       <div className="card p-10 text-center">
@@ -65,7 +68,7 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
         return;
       }
       setPlaced(true);
-      cart.clear();
+      clear(); // server already deleted a retailer's cart_items with the order
       router.push(`/order-placed/${res.orderNo}`);
     });
   }

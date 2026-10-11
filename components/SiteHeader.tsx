@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { logoutAction } from "@/app/login/actions";
 import LogoTile from "./LogoTile";
 import CartLink from "./CartLink";
 import MyOrdersButton from "./MyOrdersButton";
+import LogoutButton from "./LogoutButton";
 
 export default async function SiteHeader() {
   const user = await getCurrentUser();
@@ -17,7 +17,7 @@ export default async function SiteHeader() {
         </Link>
         <nav className="ml-auto flex items-center gap-1 whitespace-nowrap text-sm font-medium max-[379px]:gap-0">
           <Link href="/products" className="rounded-lg px-3 py-2 hover:bg-white/10 max-[379px]:px-2">Products</Link>
-          <CartLink />
+          {(!user || retailer) && <CartLink />}
           {retailer ? (
             <MyOrdersButton />
           ) : (
@@ -26,9 +26,7 @@ export default async function SiteHeader() {
                 <Link href="/admin/orders" className="rounded-lg px-3 py-2 hover:bg-white/10">Admin</Link>
               )}
               {user ? (
-                <form action={logoutAction}>
-                  <button className="rounded-lg px-3 py-2 hover:bg-white/10">Logout</button>
-                </form>
+                <LogoutButton className="rounded-lg px-3 py-2 hover:bg-white/10" />
               ) : (
                 <Link href="/login" className="rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">Login</Link>
               )}
@@ -42,9 +40,7 @@ export default async function SiteHeader() {
             <span className="min-w-0 flex-1 truncate">
               Hi {retailer.name.split(" ")[0]} · {retailer.shopName || "Retailer"} — you are seeing <b>wholesale prices</b>
             </span>
-            <form action={logoutAction} className="shrink-0">
-              <button className="text-white/80 underline-offset-2 hover:text-white hover:underline">Logout</button>
-            </form>
+            <LogoutButton formClassName="shrink-0" className="text-white/80 underline-offset-2 hover:text-white hover:underline" />
           </div>
         </div>
       )}

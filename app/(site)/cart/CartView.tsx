@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { cart, useCart } from "@/lib/cart";
+import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/format";
 import { cldUrl } from "@/lib/images";
 import type { PublicProduct } from "@/lib/catalog";
@@ -12,7 +12,7 @@ import QtyStepper from "@/components/QtyStepper";
 import { getCartProducts } from "./actions";
 
 export default function CartView({ priceLabel }: { priceLabel: string }) {
-  const lines = useCart();
+  const { enabled, lines, getLines, setQty, remove } = useCart();
   const [prices, setPrices] = useState<Map<string, PublicProduct> | null>(null);
   const [reduced, setReduced] = useState<string[]>([]);
   const codesKey = lines.map((l) => l.barcode).sort().join("|");
@@ -25,11 +25,11 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
       const map = new Map(ps.map((p) => [p.barcode, p]));
       // Clamp stored quantities to the current available stock (0 removes the line).
       const notes: string[] = [];
-      for (const l of cart.lines()) {
+      for (const l of getLines()) {
         const p = map.get(l.barcode);
         const available = p?.available ?? 0;
         if (l.qty > available) {
-          cart.setQty(l.barcode, available, available);
+          setQty(l.barcode, available, available);
           notes.push(
             available > 0
               ? `${p!.name}: reduced from ${l.qty} to ${available} (only ${available} available)`
@@ -43,8 +43,11 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
     return () => {
       alive = false;
     };
-  }, [codesKey]);
+  }, [codesKey, getLines, setQty]);
 
+  if (!enabled) {
+    return <div className="card p-10 text-center text-gray-600">Staff and owner accounts don’t have a cart.</div>;
+  }
   if (lines.length === 0) {
     return (
       <div className="card p-10 text-center">
@@ -103,7 +106,7 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
                 ) : (
                   <div className="mt-1 flex items-center gap-3 text-xs">
                     <span className="font-medium text-red-600">No longer available</span>
-                    <button onClick={() => cart.remove(line.barcode)} className="font-semibold text-gray-600 underline hover:text-red-600">
+                    <button onClick={() => remove(line.barcode)} className="font-semibold text-gray-600 underline hover:text-red-600">
                       Remove
                     </button>
                   </div>

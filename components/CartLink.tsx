@@ -5,7 +5,8 @@ import { useCartSummary } from "@/lib/cart-summary";
 import { formatINR } from "@/lib/format";
 
 export default function CartLink() {
-  const { count, total, ready } = useCartSummary();
+  const { count, total, ready, enabled } = useCartSummary();
+  if (!enabled) return null; // owner / employee: no cart
   return (
     <Link href="/cart" className="relative rounded-lg px-3 py-2 hover:bg-white/10 max-[379px]:px-2" aria-label="Cart">
       {/* Desktop: "Cart · n · ₹total"; smaller screens: "Cart" + count badge. */}

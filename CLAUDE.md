@@ -44,6 +44,7 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 - orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'packing'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), packed_by (user id null), packing_started_at (timestamp null), packed_at (timestamp null), dispatched_at (timestamp null), confirmed_at (legacy, unused), created_at, updated_at
 - order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time; packed (bool default false), packed_qty (int null)
 
+- cart_items: user_id (fk users, cascade), barcode (fk products.barcode), qty (int), updated_at; primary key (user_id, barcode) — retailers' saved carts
 - settings: key (text pk), value (text), updated_at — holds `last_import_at` (ISO timestamp of the last successful ERP import)
 
 Seed script: creates owner user from OWNER_MOBILE/OWNER_PIN.
@@ -113,7 +114,11 @@ Staff (`/staff/*`, employee or owner): `/staff/orders` (tabs To pack / Packing /
 6. Public `/`, `/products`, `/products/[barcode]` with server-side pricing. Only show products where is_visible = true AND available > 0 (see Stock reservation); only active categories. Admin shows all products.
 
 ### Day 2 – Ordering + accounts
-1. Cart in localStorage (stores product barcode + qty only; entries without a barcode are ignored). Cart page fetches current prices from server.
+1. Cart is per user (lib/cart.ts + components/CartProvider.tsx, one context for header badge, sticky bar, steppers, cart and checkout). Stores barcode + qty only; prices always come from the server.
+   - Guest (no session): localStorage key `tn_cart_guest`; the old shared key `tn_cart` is removed on load.
+   - Retailer: `cart_items` via server actions (user from the session, never from the client); every write capped at available stock. On the first page after login the guest cart is merged in (qtys added, capped) and `tn_cart_guest` cleared.
+   - Owner / employee: no cart (cart UI hidden; checkout refuses them).
+   - Logout clears the in-memory cart and `tn_cart_guest` before the server redirect. Placing an order deletes that retailer's cart_items (guests: client clears `tn_cart_guest`).
 2. `/checkout`: guest enters name, shop name (optional), mobile (10 digits), city; logged-in retailer sees their details prefilled. Server recalculates prices, locks and re-checks available stock, creates order + items (which reserves the stock), clears cart.
 3. `/order-placed/[orderNo]`: confirmation + "Send on WhatsApp" button → `https://wa.me/<NEXT_PUBLIC_OWNER_WHATSAPP>?text=<encoded order summary>` (order no, customer, shop, city, mobile, items × qty × rate, total).
 4. `/admin/orders`: list newest first, filter by status, search by order no / mobile / shop. `/admin/orders/[id]`: full detail, status dropdown, notes, link to call/WhatsApp the customer.

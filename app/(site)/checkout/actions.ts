@@ -7,6 +7,7 @@ import { getProductsByBarcodes } from "@/lib/catalog";
 import { MOBILE_RE } from "@/lib/format";
 import { rememberPlacedOrder } from "@/lib/placed-orders";
 import { lockAvailability } from "@/lib/stock";
+import { clearCart } from "@/lib/user-cart";
 
 export type CheckoutInput = {
   lines: { barcode: string; qty: number }[];
@@ -48,6 +49,7 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
 
   // Prices are recalculated on the server from the session; client prices are never used.
   const user = await getCurrentUser();
+  if (user && user.role !== "retailer") return { error: "Staff and owner accounts can't place orders." };
   const priceType = await getPriceType();
   const found = new Map((await getProductsByBarcodes([...qtyByBarcode.keys()])).map((p) => [p.barcode, p]));
 
@@ -97,6 +99,7 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
     throw e;
   }
 
+  if (user?.role === "retailer") await clearCart(user.id); // order placed: empty this retailer's saved cart
   await rememberPlacedOrder(orderNo);
   revalidatePath("/", "layout"); // stock just changed for everyone
   return { orderNo };
