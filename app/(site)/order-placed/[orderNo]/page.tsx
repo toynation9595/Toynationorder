@@ -48,7 +48,7 @@ export default async function OrderPlacedPage({ params }: PageProps<"/order-plac
             <div><span className="text-gray-500">City:</span> {order.city}</div>
           </div>
 
-          <OrderItemsTable items={items} total={order.total} />
+          <OrderItemsTable items={items} total={order.total} packingCharge={order.packingCharge} />
 
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             <Link href="/products" className="btn-outline">Continue shopping</Link>

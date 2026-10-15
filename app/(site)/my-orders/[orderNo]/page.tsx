@@ -29,7 +29,7 @@ export default async function MyOrderPage({ params }: PageProps<"/my-orders/[ord
           <div><span className="text-gray-500">Mobile:</span> +91 {o.mobile}</div>
           <div><span className="text-gray-500">City:</span> {o.city}</div>
         </div>
-        <OrderItemsTable items={items} total={o.total} />
+        <OrderItemsTable items={items} total={o.total} packingCharge={o.packingCharge} />
       </div>
     </div>
   );

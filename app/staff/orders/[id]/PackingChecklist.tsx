@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatINR } from "@/lib/format";
+import { PACKING_CHARGE_LABEL, PACKING_CHARGE_RATE } from "@/lib/pricing";
 import { cldUrl } from "@/lib/images";
 import { finishPacking, setItemDone, setItemShort, startPacking } from "../actions";
 
@@ -26,12 +27,14 @@ type Props = {
   orderId: number;
   status: string;
   total: string;
+  packingCharge: string;
   packer: string | null;
   isMine: boolean;
   items: PackItem[];
 };
 
-export default function PackingChecklist({ orderId, status, total, packer, isMine, items }: Props) {
+export default function PackingChecklist({ orderId, status, total, packingCharge, packer, isMine, items }: Props) {
+  const charge = Number(packingCharge);
   const router = useRouter();
   const [rows, setRows] = useState<Record<number, Row>>(() =>
     Object.fromEntries(items.map((i) => [i.id, { packed: i.packed, packedQty: i.packedQty }]))
@@ -49,7 +52,8 @@ export default function PackingChecklist({ orderId, status, total, packer, isMin
     if (!r?.packed) return status === "packed" || status === "dispatched" ? (r?.packedQty ?? 0) : 0;
     return r.packedQty ?? i.qty;
   };
-  const packedTotal = items.reduce((s, i) => s + Number(i.rate) * qtyPacked(i), 0);
+  const packedItems = items.reduce((s, i) => s + Number(i.rate) * qtyPacked(i), 0);
+  const packedTotal = charge > 0 ? packedItems + Math.round(packedItems * PACKING_CHARGE_RATE * 1000) / 1000 : packedItems;
 
   /** Optimistic update; revert and show the error if the server refuses. */
   function save(id: number, next: Row, call: () => Promise<{ error?: string }>) {
@@ -207,6 +211,9 @@ export default function PackingChecklist({ orderId, status, total, packer, isMin
       </ul>
 
       <div className="mt-4 card space-y-1 p-4 text-sm">
+        {charge > 0 && (
+          <div className="flex justify-between text-gray-500"><span>incl. {PACKING_CHARGE_LABEL}</span><span className="tabular-nums">{formatINR(charge)}</span></div>
+        )}
         <div className="flex justify-between"><span className="text-gray-600">Order total</span><span className="font-semibold tabular-nums">{formatINR(total)}</span></div>
         <div className="flex justify-between"><span className="text-gray-600">Packed total</span><span className="font-semibold tabular-nums text-brand-dark">{formatINR(packedTotal)}</span></div>
       </div>

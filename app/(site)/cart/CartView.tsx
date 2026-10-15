@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/format";
+import { PACKING_CHARGE_LABEL, packingChargeFor, type PriceType } from "@/lib/pricing";
 import { cldUrl } from "@/lib/images";
 import type { PublicProduct } from "@/lib/catalog";
 import ProductCard, { ProductImagePlaceholder } from "@/components/ProductCard";
 import QtyStepper from "@/components/QtyStepper";
 import { getCartProducts, getRecommendations } from "./actions";
 
-export default function CartView({ priceLabel }: { priceLabel: string }) {
+export default function CartView({ priceType }: { priceType: PriceType }) {
+  const priceLabel = priceType === "wholesale" ? "Wholesale prices" : "Retail prices";
   const { enabled, lines, getLines, setQty, remove } = useCart();
   const [prices, setPrices] = useState<Map<string, PublicProduct> | null>(null);
   const [reduced, setReduced] = useState<string[]>([]);
@@ -79,6 +81,7 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
   const inCart = new Set(lines.map((l) => l.barcode));
   const suggestions = (recs?.products ?? []).filter((p) => !inCart.has(p.barcode)).slice(0, 6);
   const total = rows.reduce((s, r) => s + (r.ok && r.p ? r.p.price * r.line.qty : 0), 0);
+  const packing = packingChargeFor(total, priceType); // wholesale only
 
   return (
     <div className="space-y-4">
@@ -139,9 +142,21 @@ export default function CartView({ priceLabel }: { priceLabel: string }) {
             <span>{lines.length} item{lines.length > 1 ? "s" : ""}</span>
             <span>{priceLabel}</span>
           </div>
+          {packing > 0 && (
+            <>
+              <div className="mt-2 flex justify-between text-sm text-gray-600">
+                <span>Items</span>
+                <span className="tabular-nums">{formatINR(total)}</span>
+              </div>
+              <div className="mt-1 flex justify-between text-sm text-gray-600">
+                <span>{PACKING_CHARGE_LABEL}</span>
+                <span className="tabular-nums">{formatINR(packing)}</span>
+              </div>
+            </>
+          )}
           <div className="mt-2 flex items-baseline justify-between text-base">
             <span>Estimated total</span>
-            <span className="tabular-nums">{formatINR(total)}</span>
+            <span className="tabular-nums">{formatINR(total + packing)}</span>
           </div>
           <p className="mt-0.5 text-xs text-gray-500">Final bill after packing</p>
           {blocked && <p className="mt-3 text-xs text-red-600">Remove unavailable items to continue.</p>}

@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "packing_charge" numeric(12, 3) DEFAULT '0' NOT NULL;

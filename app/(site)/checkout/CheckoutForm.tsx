@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useCart } from "@/lib/cart";
 import { formatINR } from "@/lib/format";
+import { PACKING_CHARGE_LABEL, packingChargeFor, type PriceType } from "@/lib/pricing";
 import type { PublicProduct } from "@/lib/catalog";
 import MobileInput from "@/components/MobileInput";
 import { getCartProducts } from "../cart/actions";
@@ -12,7 +13,7 @@ import { placeOrder } from "./actions";
 
 type Prefill = { name: string; shopName: string; mobile: string; city: string } | null;
 
-export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill; priceLabel: string }) {
+export default function CheckoutForm({ prefill, priceType }: { prefill: Prefill; priceType: PriceType }) {
   const { enabled, lines, clear } = useCart();
   const router = useRouter();
   const [prices, setPrices] = useState<Map<string, PublicProduct> | null>(null);
@@ -45,6 +46,7 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
   }
 
   const total = lines.reduce((s, l) => s + (prices?.get(l.barcode)?.price ?? 0) * l.qty, 0);
+  const packing = packingChargeFor(total, priceType);
   const blocked = !!prices && lines.some((l) => {
     const p = prices.get(l.barcode);
     return !p || l.qty > p.available;
@@ -126,9 +128,15 @@ export default function CheckoutForm({ prefill, priceLabel }: { prefill: Prefill
             })}
           </ul>
         )}
-        <div className="mt-4 flex items-baseline justify-between border-t border-gray-100 pt-3 text-base">
-          <span>Estimated total <span className="text-xs text-gray-500">({priceLabel})</span></span>
-          <span className="tabular-nums">{formatINR(total)}</span>
+        {packing > 0 && (
+          <div className="mt-4 space-y-1 border-t border-gray-100 pt-3 text-sm text-gray-600">
+            <div className="flex justify-between"><span>Items</span><span className="tabular-nums">{formatINR(total)}</span></div>
+            <div className="flex justify-between"><span>{PACKING_CHARGE_LABEL}</span><span className="tabular-nums">{formatINR(packing)}</span></div>
+          </div>
+        )}
+        <div className={`flex items-baseline justify-between text-base ${packing > 0 ? "mt-2" : "mt-4 border-t border-gray-100 pt-3"}`}>
+          <span>Estimated total <span className="text-xs text-gray-500">({priceType})</span></span>
+          <span className="tabular-nums">{formatINR(total + packing)}</span>
         </div>
         <p className="mt-0.5 text-xs text-gray-500">Final bill after packing</p>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

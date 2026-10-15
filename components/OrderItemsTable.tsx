@@ -1,4 +1,5 @@
 import { formatINR } from "@/lib/format";
+import { PACKING_CHARGE_LABEL, PACKING_CHARGE_RATE } from "@/lib/pricing";
 
 type Item = {
   id: number;
@@ -17,10 +18,24 @@ type Item = {
  * Order lines. With `showPacked`, short items (packed qty < ordered qty) are highlighted in amber
  * with "ordered vs packed" and a packed total is shown.
  */
-export default function OrderItemsTable({ items, total, showPacked = false }: { items: Item[]; total: string; showPacked?: boolean }) {
+export default function OrderItemsTable({
+  items,
+  total,
+  packingCharge = "0",
+  showPacked = false,
+}: {
+  items: Item[];
+  /** Order total incl. packing charge. */
+  total: string;
+  packingCharge?: string;
+  showPacked?: boolean;
+}) {
+  const charge = Number(packingCharge);
   const packedQty = (i: Item) => (i.packedQty ?? (i.packed ? i.qty : null));
   const anyPacked = showPacked && items.some((i) => packedQty(i) !== null);
-  const packedTotal = items.reduce((s, i) => s + Number(i.rate) * (packedQty(i) ?? 0), 0);
+  const packedItems = items.reduce((s, i) => s + Number(i.rate) * (packedQty(i) ?? 0), 0);
+  // Wholesale orders carry the 1% packing charge on whatever was actually packed.
+  const packedTotal = charge > 0 ? packedItems + Math.round(packedItems * PACKING_CHARGE_RATE * 1000) / 1000 : packedItems;
 
   return (
     <div className="overflow-x-auto">
@@ -56,7 +71,19 @@ export default function OrderItemsTable({ items, total, showPacked = false }: { 
           })}
         </tbody>
         <tfoot>
-          <tr className="border-t border-gray-200">
+          {charge > 0 && (
+            <>
+              <tr className="border-t border-gray-200 text-gray-600">
+                <td colSpan={anyPacked ? 4 : 3} className="pt-3 pr-3 text-right">Items</td>
+                <td className="pt-3 pl-3 text-right tabular-nums">{formatINR(Number(total) - charge)}</td>
+              </tr>
+              <tr className="text-gray-600">
+                <td colSpan={anyPacked ? 4 : 3} className="pr-3 text-right">{PACKING_CHARGE_LABEL}</td>
+                <td className="pl-3 text-right tabular-nums">{formatINR(charge)}</td>
+              </tr>
+            </>
+          )}
+          <tr className={charge > 0 ? "" : "border-t border-gray-200"}>
             <td colSpan={anyPacked ? 4 : 3} className="py-3 pr-3 text-right font-semibold">Total</td>
             <td className="py-3 pl-3 text-right font-heading text-lg font-semibold text-brand-dark tabular-nums">{formatINR(total)}</td>
           </tr>

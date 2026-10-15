@@ -14,7 +14,7 @@ export default async function CheckoutPage() {
       <h1 className="mb-5 text-3xl font-semibold text-brand-dark">Checkout</h1>
       <CheckoutForm
         prefill={retailer && { name: retailer.name, shopName: retailer.shopName, mobile: retailer.mobile, city: retailer.city }}
-        priceLabel={retailer ? "wholesale" : "retail"}
+        priceType={retailer ? "wholesale" : "retail"}
       />
     </div>
   );

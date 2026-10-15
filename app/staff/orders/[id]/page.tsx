@@ -25,6 +25,7 @@ export default async function StaffOrderPage({ params }: PageProps<"/staff/order
       shopName: orders.shopName,
       city: orders.city,
       total: orders.total,
+      packingCharge: orders.packingCharge,
       createdAt: orders.createdAt,
       packedBy: orders.packedBy,
       packedAt: orders.packedAt,
@@ -80,6 +81,7 @@ export default async function StaffOrderPage({ params }: PageProps<"/staff/order
         orderId={o.id}
         status={o.status}
         total={o.total}
+        packingCharge={o.packingCharge}
         packer={o.packer}
         isMine={o.packedBy === me.id}
         items={items}

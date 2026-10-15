@@ -5,6 +5,7 @@ import { db, orders, orderItems } from "@/lib/db";
 import { getCurrentUser, getPriceType } from "@/lib/auth";
 import { getProductsByBarcodes } from "@/lib/catalog";
 import { MOBILE_RE } from "@/lib/format";
+import { packingChargeFor } from "@/lib/pricing";
 import { rememberPlacedOrder } from "@/lib/placed-orders";
 import { lockAvailability } from "@/lib/stock";
 import { clearCart } from "@/lib/user-cart";
@@ -63,7 +64,9 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
   }
   if (problems.length) return { error: `Please update your cart: ${problems.join("; ")}.` };
 
-  const total = r3(items.reduce((s, i) => s + i.amount, 0));
+  const subtotal = r3(items.reduce((s, i) => s + i.amount, 0));
+  const packingCharge = packingChargeFor(subtotal, priceType); // wholesale only
+  const total = r3(subtotal + packingCharge);
 
   let orderNo: number;
   try {
@@ -87,6 +90,7 @@ export async function placeOrder(input: CheckoutInput): Promise<CheckoutResult> 
           city,
           priceType,
           total: String(total),
+          packingCharge: String(packingCharge),
         })
         .returning({ id: orders.id, orderNo: orders.orderNo });
       await tx.insert(orderItems).values(

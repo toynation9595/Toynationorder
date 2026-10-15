@@ -64,6 +64,13 @@
       "when": 1792044167479,
       "tag": "0008_zero_out_of_stock",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792076259370,
+      "tag": "0009_packing_charge",
+      "breakpoints": true
     }
   ]
 }

@@ -25,7 +25,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
 
       <div className="grid gap-5 md:grid-cols-[1fr_300px]">
         <div className="card p-5">
-          <OrderItemsTable items={items} total={o.total} showPacked={o.status === "packed" || o.status === "dispatched" || o.status === "packing"} />
+          <OrderItemsTable items={items} total={o.total} packingCharge={o.packingCharge} showPacked={o.status === "packed" || o.status === "dispatched" || o.status === "packing"} />
         </div>
 
         <div className="space-y-5">

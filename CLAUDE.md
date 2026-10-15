@@ -33,6 +33,7 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 - Price is decided ON THE SERVER from the session. Product data sent to the browser contains ONE field `price` only. Never send both prices to the browser, and never send the wholesale price to a guest. Admin products shows both (Wholesale and Retail ×2).
 - Existing orders/order_items keep the rates they were placed at.
 - On order submit, server ignores client prices and recalculates every line.
+- Packing charge: WHOLESALE (retailer) orders only, fixed 1% of the items subtotal (`PACKING_CHARGE_RATE = 0.01`, `packingChargeFor()` in lib/pricing.ts), no rounding. Stored per order in orders.packing_charge; orders.total = items subtotal + packing_charge. Shown as "Packing charges (1%)" in cart, checkout, order-placed, WhatsApp summary, my-orders, admin and staff. Guests/retail: none. Older orders have 0.
 - No GST anywhere. No MOQ. Quantity = any positive integer.
 - Mobile numbers: India only, default +91. Users type 10 digits (validate `^[6-9]\d{9}$`), store 10 digits, show "+91" as a fixed prefix in inputs. WhatsApp links use `91` + number.
 
@@ -41,7 +42,7 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 - categories: id, name, slug (unique), sort_order, is_active, created_at
 - products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), erp_name (from import), display_name (text null, owner override), description (text null), unit (text, as in ERP), wholesale_price (numeric 10,2 – ERP Sales Price), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
 - product_images: id, barcode (fk products.barcode), public_id, is_primary (bool), sort_order, created_at
-- orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), status ('new'|'packing'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), packed_by (user id null), packing_started_at (timestamp null), packed_at (timestamp null), dispatched_at (timestamp null), confirmed_at (legacy, unused), created_at, updated_at
+- orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), packing_charge (numeric, default 0), status ('new'|'packing'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), packed_by (user id null), packing_started_at (timestamp null), packed_at (timestamp null), dispatched_at (timestamp null), confirmed_at (legacy, unused), created_at, updated_at
 - order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time; packed (bool default false), packed_qty (int null)
 
 - cart_items: user_id (fk users, cascade), barcode (fk products.barcode), qty (int), updated_at; primary key (user_id, barcode) — retailers' saved carts

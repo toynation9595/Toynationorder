@@ -93,7 +93,8 @@ export const orders = pgTable(
     })
       .notNull()
       .default("new"),
-    total: numeric("total", { precision: 12, scale: 3 }).notNull(),
+    total: numeric("total", { precision: 12, scale: 3 }).notNull(), // items subtotal + packing_charge
+    packingCharge: numeric("packing_charge", { precision: 12, scale: 3 }).notNull().default("0"), // wholesale: 1%
     notes: text("notes"),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }), // legacy: no confirmation step any more
     packedBy: integer("packed_by").references(() => users.id, { onDelete: "set null" }),

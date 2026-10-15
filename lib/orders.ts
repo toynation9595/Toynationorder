@@ -2,6 +2,7 @@ import "server-only";
 import { asc, eq } from "drizzle-orm";
 import { db, orders, orderItems, users } from "@/lib/db";
 import { formatINR, orderLabel } from "@/lib/format";
+import { PACKING_CHARGE_LABEL } from "@/lib/pricing";
 
 export type OrderRow = typeof orders.$inferSelect;
 export type OrderItemRow = typeof orderItems.$inferSelect;
@@ -40,6 +41,7 @@ export function orderSummaryText(o: OrderRow, items: OrderItemRow[]): string {
       (i, k) => `${k + 1}. ${i.productName} (${i.barcode ?? `#${i.productCode}`}) — ${i.qty} × ${formatINR(i.rate)} = ${formatINR(i.amount)}`
     ),
     "",
+    ...(Number(o.packingCharge) > 0 ? [`${PACKING_CHARGE_LABEL}: ${formatINR(o.packingCharge)}`] : []),
     `*Total: ${formatINR(o.total)}*`,
   ];
   return lines.join("\n");
