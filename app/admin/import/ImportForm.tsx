@@ -174,9 +174,19 @@ export default function ImportForm() {
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="New" value={summary.created} color="bg-tn-teal/10 text-tn-teal" />
             <Stat label="Updated" value={summary.updated} color="bg-brand-light text-brand" />
-            <Stat label="Marked out of stock" value={summary.markedOutOfStock} color="bg-tn-orange/10 text-tn-orange" />
+            <Stat label="Set to zero (not in file)" value={summary.setToZero} color="bg-tn-orange/10 text-tn-orange" />
             <Stat label="Skipped rows" value={summary.skipped} color="bg-gray-100 text-gray-600" />
           </div>
+          {summary.setToZero > 0 && (
+            <details className="mt-4 rounded-xl bg-gray-50 p-3 text-sm">
+              <summary className="cursor-pointer font-medium text-gray-700">
+                Set to zero (not in file): {summary.setToZero} — show barcodes
+              </summary>
+              <p className="mt-2 break-words font-mono text-xs leading-relaxed text-gray-600">
+                {summary.setToZeroBarcodes.join(", ")}
+              </p>
+            </details>
+          )}
         </div>
       )}
     </div>

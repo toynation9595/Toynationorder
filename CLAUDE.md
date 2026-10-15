@@ -61,8 +61,9 @@ Source: stock report .xlsx from the ERP (single sheet).
   - code, name, unit, wholesale_price, last_received = from the row with the LATEST Rec.Date (tie → last row)
 - Upsert by barcode: update code, erp_name, unit, wholesale_price, stock_qty, in_stock, last_received ONLY. Never touch category_id, is_visible, images, display_name or description.
 - New barcodes inherit the category_id of an existing product with the same code, if any.
-- Barcodes in DB but not in the file → in_stock = false.
-- Show result summary: new / updated / marked out of stock / skipped rows.
+- Rows in the file with total stock ≤ 0 → in_stock = false.
+- Barcodes in DB but not in the file → stock_qty = 0 AND in_stock = false (zeroing the qty matters: an old stock_qty must never count as available).
+- Show result summary: new / updated / "Set to zero (not in file): {count}" (barcodes listed on expand) / skipped rows.
 - Every successful import sets settings.last_import_at = now().
 
 ## Product names (lib/productName.ts)
@@ -80,8 +81,8 @@ Source: stock report .xlsx from the ERP (single sheet).
 
 ## Stock reservation (lib/stock.ts)
 - Stock is reserved when an order is PLACED. Nothing is stored; reservation is computed: reserved(barcode) = SUM over orders whose status is 'new', 'packing' or 'packed', OR status is 'dispatched' and dispatched_at > last_import_at (the ERP stock does not include it yet). Quantity is order_items.qty, except 'packed'/'dispatched' use COALESCE(packed_qty, qty), so short items release stock. Cancelled orders never count, so cancelling releases stock automatically.
-- available = max(0, floor(stock_qty − reserved)).
-- Orders set confirmed_at when they become 'confirmed' and dispatched_at when they become 'dispatched'.
+- available = 0 when in_stock is false; otherwise max(0, floor(stock_qty − reserved)).
+- Orders set dispatched_at when they become 'dispatched'.
 - Public catalogue, category counts and product pages use `available`: products with available = 0 are hidden. Admin products shows them all with Stock / Reserved / Available columns.
 - Cart and checkout cap qty at available and show "Only X available".
 - Order placement (checkout server action) runs in ONE DB transaction on the Neon Pool (websocket) driver — never the HTTP driver: lock the affected product rows (SELECT … FOR UPDATE, in barcode order), recompute available for every line, reject with a per-item "Only X available" message if any line exceeds it, otherwise insert the order and its items in the same transaction.

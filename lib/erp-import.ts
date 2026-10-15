@@ -13,7 +13,9 @@ export type ImportSummary = {
   products: number;
   created: number;
   updated: number;
-  markedOutOfStock: number;
+  /** Barcodes in the DB but not in the file: stock_qty = 0, in_stock = false. */
+  setToZero: number;
+  setToZeroBarcodes: string[];
   skipped: number;
 };
 

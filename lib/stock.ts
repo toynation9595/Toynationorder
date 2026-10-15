@@ -10,7 +10,8 @@ import { shownName } from "@/lib/productName";
  *   or 'dispatched' with dispatched_at > last_import_at (the ERP stock does not reflect them yet).
  * Quantity: order_items.qty, except 'packed'/'dispatched' use COALESCE(packed_qty, qty) so short
  *   items release the missing units.
- * available = max(0, floor(stock_qty − reserved)).
+ * available = 0 when in_stock is false (not in the last ERP file, or ERP stock ≤ 0);
+ *   otherwise max(0, floor(stock_qty − reserved)).
  * Nothing is stored: cancelling an order releases its stock automatically.
  */
 export const LAST_IMPORT_KEY = "last_import_at";
@@ -34,7 +35,9 @@ const reservedRaw = `coalesce((
 export const reservedSql = sql<number>`${sql.raw(reservedRaw)}`;
 
 /** Available qty for the current `products` row. */
-export const availableSql = sql<number>`${sql.raw(`greatest(0, floor("products"."stock_qty" - ${reservedRaw}))::int`)}`;
+export const availableSql = sql<number>`${sql.raw(
+  `(case when "products"."in_stock" then greatest(0, floor("products"."stock_qty" - ${reservedRaw})) else 0 end)::int`
+)}`;
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

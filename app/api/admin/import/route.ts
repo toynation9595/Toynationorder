@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { and, eq, notInArray, sql } from "drizzle-orm";
+import { and, eq, ne, notInArray, or, sql } from "drizzle-orm";
 import { db, products } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { groupErpRows, type ErpRow, type ImportSummary } from "@/lib/erp-import";
@@ -86,11 +86,15 @@ export async function POST(req: Request) {
         });
     }
 
-    const marked = await tx
+    // Not in the file = the ERP has no stock for it: zero the quantity too, not just in_stock
+    // (otherwise the old stock_qty would still count as available). Only rows that change are reported.
+    const zeroed = await tx
       .update(products)
-      .set({ inStock: false, updatedAt: new Date() })
-      .where(and(notInArray(products.barcode, barcodes), eq(products.inStock, true)))
-      .returning({ id: products.id });
+      .set({ stockQty: "0", inStock: false, updatedAt: new Date() })
+      .where(
+        and(notInArray(products.barcode, barcodes), or(eq(products.inStock, true), ne(products.stockQty, "0")))
+      )
+      .returning({ barcode: products.barcode });
 
     await markImported(tx);
 
@@ -98,7 +102,8 @@ export async function POST(req: Request) {
       products: grouped.length,
       created,
       updated: grouped.length - created,
-      markedOutOfStock: marked.length,
+      setToZero: zeroed.length,
+      setToZeroBarcodes: zeroed.map((z) => z.barcode).sort(),
       skipped,
     } satisfies ImportSummary;
   });
