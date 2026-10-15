@@ -3,13 +3,13 @@
 
 import Script from "next/script";
 import { useRef, useState, useTransition } from "react";
-import { cldUrl } from "@/lib/images";
+import { cldUrl, IMAGE_FORMATS } from "@/lib/images";
 import { addImage, deleteImage, setPrimaryImage } from "./actions";
 import type { AdminProduct } from "./ProductsTable";
 
 const FOLDER = "toynation/products";
 
-type UploadResult = { event: string; info: { public_id: string } };
+type UploadResult = { event: string; info: { public_id: string; format?: string } };
 type Widget = { open: () => void; destroy: () => void };
 declare global {
   interface Window {
@@ -41,8 +41,8 @@ export default function ImageManager({ product, cloudName, apiKey, onClose }: Pr
         multiple: true,
         resourceType: "image",
         sources: ["local", "camera", "url"],
-        clientAllowedFormats: ["jpg", "jpeg", "png", "webp", "heic"],
-        maxFileSize: 15_000_000,
+        clientAllowedFormats: [...IMAGE_FORMATS],
+        maxFileSize: 10_000_000, // 10 MB
         uploadSignature: async (cb: (sig: string) => void, paramsToSign: Record<string, unknown>) => {
           const res = await fetch("/api/admin/cloudinary-sign", {
             method: "POST",
@@ -61,7 +61,8 @@ export default function ImageManager({ product, cloudName, apiKey, onClose }: Pr
         }
         if (result?.event === "success") {
           const id = result.info.public_id;
-          queue.current = queue.current.then(() => addImage(product.barcode, id)).catch(() => setError("Could not save an image."));
+          const format = result.info.format ?? "";
+          queue.current = queue.current.then(() => addImage(product.barcode, id, format)).catch(() => setError("Could not save an image."));
         }
       }
     );

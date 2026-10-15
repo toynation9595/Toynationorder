@@ -13,7 +13,7 @@ export default function CategoryTile({ c }: { c: PublicCategory }) {
       <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-white">
         {c.image ? (
           <img
-            src={cldUrl(c.image, 400)}
+            src={cldUrl(c.image, 400, c.imageGif)}
             alt=""
             loading="lazy"
             className="h-full w-full object-contain p-2 transition duration-200 group-hover:scale-105 group-focus-visible:scale-105"

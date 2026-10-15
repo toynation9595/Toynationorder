@@ -67,6 +67,7 @@ export const productImages = pgTable(
       .notNull()
       .references(() => products.barcode, { onDelete: "cascade", onUpdate: "cascade" }),
     publicId: text("public_id").notNull(),
+    format: text("format"), // from the upload widget, e.g. "gif" (null for images uploaded before GIF support)
     isPrimary: boolean("is_primary").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

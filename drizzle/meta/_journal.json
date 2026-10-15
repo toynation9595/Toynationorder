@@ -71,6 +71,13 @@
       "when": 1792076259370,
       "tag": "0009_packing_charge",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792089663932,
+      "tag": "0010_image_format",
+      "breakpoints": true
     }
   ]
 }

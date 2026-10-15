@@ -17,6 +17,8 @@ export type PublicProduct = {
   available: number;
   inStock: boolean;
   image: string | null;
+  /** Primary image is a GIF → lists show its first frame (pg_1). */
+  imageGif: boolean;
 };
 
 /** Same rules as cleanName() in lib/productName.ts, in SQL — used only for sorting by the shown name. */
@@ -28,7 +30,7 @@ export const shownNameSql = sql<string>`coalesce(
   btrim(${products.erpName})
 )`;
 
-export type PublicCategory = { id: number; name: string; slug: string; count: number; image: string | null };
+export type PublicCategory = { id: number; name: string; slug: string; count: number; image: string | null; imageGif: boolean };
 
 /*
  * Primary image of the first visible, in-stock product (by name) in the category that has an image.
@@ -42,6 +44,13 @@ const categoryImage = sql<string | null>`(
   order by coalesce(p2.display_name, p2.erp_name), p2.barcode, pi.is_primary desc, pi.sort_order
   limit 1
 )`;
+const categoryImageGif = sql<boolean>`coalesce((
+  select pi.format = 'gif' from products p2
+  join product_images pi on pi.barcode = p2.barcode
+  where p2.category_id = "categories"."id" and p2.is_visible and p2.in_stock
+  order by coalesce(p2.display_name, p2.erp_name), p2.barcode, pi.is_primary desc, pi.sort_order
+  limit 1
+), false)`;
 
 /** Visible product with available stock, in an active category (or uncategorised). */
 const listable = and(
@@ -55,6 +64,11 @@ const primaryImage = sql<string | null>`(
   where ${productImages.barcode} = ${products.barcode}
   order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc limit 1
 )`;
+const primaryImageGif = sql<boolean>`coalesce((
+  select ${productImages.format} = 'gif' from ${productImages}
+  where ${productImages.barcode} = ${products.barcode}
+  order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc limit 1
+), false)`;
 
 type PublicRow = {
   product: PublicProduct;
@@ -85,6 +99,7 @@ async function queryPublicProducts(opts: {
       wholesalePrice: products.wholesalePrice,
       available: availableSql,
       image: primaryImage,
+      imageGif: primaryImageGif,
       categoryName: categories.name,
       categorySlug: categories.slug,
     })
@@ -108,6 +123,7 @@ async function queryPublicProducts(opts: {
         available,
         inStock: available > 0,
         image: r.image,
+        imageGif: !!r.imageGif,
       },
       description: r.description?.trim() || null,
       category: r.categoryName && r.categorySlug ? { name: r.categoryName, slug: r.categorySlug } : null,
@@ -137,6 +153,7 @@ export async function getActiveCategories(): Promise<PublicCategory[]> {
       slug: categories.slug,
       count: count(products.id),
       image: categoryImage,
+      imageGif: categoryImageGif,
     })
     .from(categories)
     .leftJoin(

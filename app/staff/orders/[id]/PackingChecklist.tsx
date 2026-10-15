@@ -19,6 +19,7 @@ export type PackItem = {
   packed: boolean;
   packedQty: number | null;
   image: string | null;
+  imageGif: boolean;
 };
 
 type Row = { packed: boolean; packedQty: number | null };
@@ -126,7 +127,7 @@ export default function PackingChecklist({ orderId, status, total, packingCharge
               <div className="flex items-center gap-3">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
                   {i.image ? (
-                    <img src={cldUrl(i.image, 120)} alt="" className="h-full w-full object-contain p-1" />
+                    <img src={cldUrl(i.image, 120, i.imageGif)} alt="" className="h-full w-full object-contain p-1" />
                   ) : (
                     <div className="flex h-full items-center justify-center text-2xl">🧸</div>
                   )}

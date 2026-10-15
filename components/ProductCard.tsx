@@ -20,7 +20,7 @@ export default function ProductCard({ p }: { p: PublicProduct }) {
     <div className="card flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(61,44,110,0.14)]">
       <Link href={href} className="relative block aspect-square overflow-hidden border-b border-gray-100 bg-white">
         {p.image ? (
-          <img src={cldUrl(p.image, 400)} alt={p.name} loading="lazy" className="h-full w-full object-contain p-2" />
+          <img src={cldUrl(p.image, 400, p.imageGif)} alt={p.name} loading="lazy" className="h-full w-full object-contain p-2" />
         ) : (
           <ProductImagePlaceholder />
         )}

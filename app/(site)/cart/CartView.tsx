@@ -102,7 +102,7 @@ export default function CartView({ priceType }: { priceType: PriceType }) {
             <div key={line.barcode} className="flex gap-3 p-3 sm:p-4">
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
                 {p?.image ? (
-                  <img src={cldUrl(p.image, 400)} alt="" className="h-full w-full object-contain p-1" />
+                  <img src={cldUrl(p.image, 400, p.imageGif)} alt="" className="h-full w-full object-contain p-1" />
                 ) : (
                   <ProductImagePlaceholder />
                 )}

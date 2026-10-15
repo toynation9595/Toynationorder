@@ -6,6 +6,7 @@ import { db, products, productImages, categories } from "@/lib/db";
 import { requireOwner } from "@/lib/auth";
 import { CLOUDINARY_FOLDER, destroyImage } from "@/lib/cloudinary";
 import { cleanName } from "@/lib/productName";
+import { IMAGE_FORMATS } from "@/lib/images";
 
 function done() {
   revalidatePath("/admin/products");
@@ -57,9 +58,10 @@ export async function toggleVisible(barcode: string) {
   done();
 }
 
-export async function addImage(barcode: string, publicId: string) {
+export async function addImage(barcode: string, publicId: string, format = "") {
   await requireOwner();
   if (!publicId.startsWith(`${CLOUDINARY_FOLDER}/`)) return;
+  const fmt = String(format).toLowerCase();
   const [{ n, max }] = await db
     .select({ n: sql<number>`count(*)::int`, max: sql<number>`coalesce(max(${productImages.sortOrder}), 0)::int` })
     .from(productImages)
@@ -67,6 +69,7 @@ export async function addImage(barcode: string, publicId: string) {
   await db.insert(productImages).values({
     barcode,
     publicId,
+    format: (IMAGE_FORMATS as readonly string[]).includes(fmt) ? fmt : null,
     isPrimary: n === 0,
     sortOrder: max + 1,
   });

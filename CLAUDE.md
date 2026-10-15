@@ -14,6 +14,7 @@ Address (footer/About): Rajneel Square, Near Indian Oil Pump, Mumbai-Agra Servic
 - Neon Postgres via `@neondatabase/serverless` + Drizzle ORM (drizzle-kit for migrations)
 - Auth: custom. bcryptjs for PIN hashing, signed JWT session in httpOnly cookie via `jose` (90-day expiry)
 - Images: Cloudinary Upload Widget (signed uploads via our API route); display with Cloudinary URLs (`f_auto,q_auto,w_400` cards, `w_1200` detail). Do NOT use Vercel image optimisation.
+  - Upload formats: jpg, jpeg, png, webp, gif; max 10 MB. GIFs animate on the product page (`f_auto,q_auto,w_1200`); cards, cart lines, category tiles and packing rows add `pg_1` (first frame only) when the image format is gif.
 - Excel import: SheetJS (`xlsx`) parsed in the browser, rows sent to server as JSON
 - Hosting: Vercel (single project)
 
@@ -41,7 +42,7 @@ OWNER_MOBILE, OWNER_PIN (used only by the seed script)
 - users: id, mobile (unique, text), name, shop_name, city, pin_hash, role ('owner'|'retailer'|'employee'), is_active (bool, default true), failed_attempts (int), locked_until (timestamp null), created_at
 - categories: id, name, slug (unique), sort_order, is_active, created_at
 - products: id, barcode (unique, TEXT – the PRODUCT KEY, from the ERP Barcode column), code (TEXT, ERP product Code, not unique – several barcodes can share a code), erp_name (from import), display_name (text null, owner override), description (text null), unit (text, as in ERP), wholesale_price (numeric 10,2 – ERP Sales Price), stock_qty (numeric), in_stock (bool), category_id (null), is_visible (bool default true), last_received (date null), updated_at
-- product_images: id, barcode (fk products.barcode), public_id, is_primary (bool), sort_order, created_at
+- product_images: id, barcode (fk products.barcode), public_id, format (text null, from the upload widget), is_primary (bool), sort_order, created_at
 - orders: id, order_no (int unique, sequence starting 1001; display as `TN-1001`), user_id (null for guest), customer_name, shop_name, mobile, city, price_type ('retail'|'wholesale'), packing_charge (numeric, default 0), status ('new'|'packing'|'packed'|'dispatched'|'cancelled', default 'new'), total (numeric), notes (text null), packed_by (user id null), packing_started_at (timestamp null), packed_at (timestamp null), dispatched_at (timestamp null), confirmed_at (legacy, unused), created_at, updated_at
 - order_items: id, order_id, product_code, barcode (null only for orders placed before the barcode switch), product_name, unit, qty (int), rate (numeric), amount (numeric) — snapshot values at order time; packed (bool default false), packed_qty (int null)
 

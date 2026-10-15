@@ -51,6 +51,11 @@ export default async function StaffOrderPage({ params }: PageProps<"/staff/order
         where pi.barcode = "order_items"."barcode"
         order by pi.is_primary desc, pi.sort_order asc limit 1
       )`,
+      imageGif: sql<boolean>`coalesce((
+        select pi.format = 'gif' from product_images pi
+        where pi.barcode = "order_items"."barcode"
+        order by pi.is_primary desc, pi.sort_order asc limit 1
+      ), false)`,
     })
     .from(orderItems)
     .where(eq(orderItems.orderId, orderId))
