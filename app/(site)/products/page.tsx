@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
+import LiveSearch from "@/components/LiveSearch";
 import { getActiveCategories, listProducts } from "@/lib/catalog";
 
 // Stock and price change with every order/import: always render fresh.
@@ -39,11 +40,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
             {priceType === "wholesale" ? "Wholesale prices" : "Retail prices"}
           </p>
         </div>
-        <form className="flex gap-2 sm:w-96">
-          {slug && <input type="hidden" name="category" value={slug} />}
-          <input name="q" defaultValue={q} type="search" placeholder="Search name, code or barcode" className="input" />
-          <button className="btn-primary">Search</button>
-        </form>
+        <LiveSearch placeholder="Search name, code or barcode" className="sm:w-96" />
       </div>
 
       {cats.length > 0 && (

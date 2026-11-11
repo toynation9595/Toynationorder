@@ -5,6 +5,7 @@ import { productSearch, shownNameSql } from "@/lib/catalog";
 import { cleanName, shownName } from "@/lib/productName";
 import { availableSql, reservedSql } from "@/lib/stock";
 import ProductsTable, { type AdminProduct } from "./ProductsTable";
+import LiveSearch from "@/components/LiveSearch";
 
 export const metadata = { title: "Products – Toy Nation Admin" };
 
@@ -87,11 +88,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
     <div className="mx-auto max-w-7xl">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-semibold text-brand-dark">Products</h1>
-        <form className="flex w-full gap-2 sm:w-auto">
-          {f && <input type="hidden" name="f" value={f} />}
-          <input name="q" defaultValue={q} placeholder="Search name, code or barcode" className="input sm:w-72" />
-          <button className="btn-primary">Search</button>
-        </form>
+        <LiveSearch placeholder="Search name, code or barcode" className="w-full sm:w-72" />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
