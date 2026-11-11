@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import ContactButtons, { ADDRESS, BUSINESS_HOURS } from "./ContactButtons";
 
 export { ADDRESS };
@@ -18,7 +19,7 @@ export default function SiteFooter() {
         <div className="text-sm">
           <div className="mb-1 font-semibold text-white">Visit us</div>
           <address className="not-italic leading-relaxed">{ADDRESS}</address>
-          {BUSINESS_HOURS && <p className="mt-2">🕘 {BUSINESS_HOURS}</p>}
+          {BUSINESS_HOURS && <p className="mt-2 flex items-center gap-1.5"><Clock className="h-4 w-4 shrink-0" aria-hidden /> {BUSINESS_HOURS}</p>}
           <ContactButtons tone="dark" className="mt-3" />
         </div>
         <div className="text-sm">

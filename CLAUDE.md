@@ -13,7 +13,8 @@ Address (footer/About): Rajneel Square, Near Indian Oil Pump, Mumbai-Agra Servic
 - Tailwind CSS v4 (theme tokens in app/globals.css; `@apply` of custom classes is not allowed).
 - Neon Postgres + Drizzle ORM via the **Pool/websocket driver** (`drizzle-orm/neon-serverless`, lib/db/index.ts) — transactions + `SELECT … FOR UPDATE` rely on it. drizzle-kit for migrations.
 - Auth: custom. bcryptjs PIN hashes, `jose` JWT in httpOnly cookie `tn_session` (90 days). Lockout 15 min after 5 wrong PINs.
-- Images: Cloudinary Upload Widget (signed via /api/admin/cloudinary-sign, folder `toynation/products`); URLs from `cldUrl()` in lib/images.ts (`f_auto,q_auto,w_400` cards, `w_1200` detail). No Vercel image optimisation.
+- Images: Cloudinary Upload Widget (signed via /api/admin/cloudinary-sign, folders `toynation/products` and `toy-nation/banners` only); URLs from `cldUrl()` in lib/images.ts (`f_auto,q_auto,w_400` cards, `w_1200` detail) and `bannerImageUrl()` in lib/banner-presets.ts (`c_fill,g_auto,ar_12:7,f_auto,q_auto,w_800`). No Vercel image optimisation.
+- Icons: lucide-react (no emoji in the UI).
 - Excel import: SheetJS (`xlsx` 0.20.3 from cdn.sheetjs.com) parsed in the browser, rows POSTed as JSON.
 - Hosting: Vercel project `toynation`; GitHub `toynation9595/Toynationorder` (branch main). One Neon DB (dev and prod share it).
 
@@ -51,7 +52,8 @@ Local: `.env.local` (git-ignored). Vercel: production env vars (NEXT_PUBLIC_* ar
 - order_items: id, order_id, product_code, barcode (null only for pre-barcode orders), product_name (shown name snapshot), unit, qty, rate, amount, packed (bool), packed_qty (null)
 - cart_items: (user_id, barcode) PK, qty, updated_at — retailers' saved carts
 - settings: key/value — `last_import_at`
-- Seed (`npm run db:seed`): owner from OWNER_MOBILE/OWNER_PIN. Migrations 0000–0010 in /drizzle.
+- banners: id, image_public_id, label (null), title (≤ 40), link_text, link_type ('category'|'product'|'search'), link_value (slug / barcode / search text), color ('orange'|'pink'|'teal'|'purple'|'amber'), starts_at / ends_at (date null), is_active, sort_order, created_at, updated_at
+- Seed (`npm run db:seed`): owner from OWNER_MOBILE/OWNER_PIN. Migrations 0000–0011 in /drizzle.
 
 ## ERP stock import (/admin/import, app/api/admin/import, lib/erp-import.ts)
 - .xlsx, first sheet; skip first 4 rows; columns by position (0-based): 0 Code, 1 Product Name, 2 Unit, 3 Current Stock, 12 Sales Price, 15 Rec.Date (`06-Sep-26`), 23 Barcode. Never store any other column.
@@ -88,17 +90,28 @@ Local: `.env.local` (git-ignored). Vercel: production env vars (NEXT_PUBLIC_* ar
 - Order-placed page (visible to the placing browser via signed cookie, the owning retailer, or owner): WhatsApp button to NEXT_PUBLIC_OWNER_WHATSAPP with the summary. Shop name optional at checkout (NULL when empty; lines skipped when empty).
 
 ## Admin (/admin, owner)
-Orders (filter by status, search order no/mobile/shop/name, packed by/at) · Products (search, filters uncategorised/no image/out of stock, bulk category, visibility, display name/description editor, Cloudinary images: multiple, primary, delete also from Cloudinary; formats jpg/jpeg/png/webp/gif ≤ 10 MB) · Import · Categories (add/rename/reorder/activate) · Retailers · Employees (add/edit/reset PIN/activate) · Packing link → /staff/orders.
+Orders (filter by status, search order no/mobile/shop/name, packed by/at) · Banners (see above) · Products (search, filters uncategorised/no image/out of stock, bulk category, visibility, display name/description editor, Cloudinary images: multiple, primary, delete also from Cloudinary; formats jpg/jpeg/png/webp/gif ≤ 10 MB) · Import · Categories (add/rename/reorder/activate) · Retailers · Employees (add/edit/reset PIN/activate) · Packing link → /staff/orders.
 
 ## Design
 - Playful-but-clean toy brand, white background, mobile-first. Fonts: Fredoka (headings), Inter (body). Palette tokens: brand #5B3FA0 (dark #3D2C6E), tn-orange #F07A2E, tn-pink #E8488A, tn-teal #2BB5BE, tn-yellow #F5C518.
-- Logos: `/logo-transparent.png` directly on the purple hero (180px wide, hidden on mobile; the home search bar is indented 212px to align with the headline). `/logo-tn-mark.png` (36px tall) directly on purple in the site header and footer + "Toy Nation" text. `/logo.png` (signboard photo) only inside LogoTile on the login card and admin/staff headers — never bare on white.
-- Home: hero, search bar, white brand-tinted category tiles (2/3/6 columns), New arrivals, About + "Visit our store" (address, hours, Call / WhatsApp / Get directions). Retailer header: Products, Cart, "My orders" pill; greeting strip with Logout.
+- Logos: `/logo-tn-mark.png` (36px tall) directly on purple in the site header and footer + "Toy Nation" text. `/logo-transparent.png` is currently unused. `/logo.png` (signboard photo) only inside LogoTile on the login card and admin/staff headers — never bare on white.
+- Site header: logo + name left; pill search (translucent white, submits to /products?q=) centred on md+ (max 360px), its own full-width row below the bar on mobile; nav right. Retailer header: Products, Cart, "My orders" pill; greeting strip with Logout.
+- Home (app/(site)/page.tsx, force-dynamic), in order:
+  1. Hero (purple): lg+ two columns — left headline "Toys & seasonal goods, wholesale", subtext with {count}+, "Browse products" (yellow) + "Retailer login" (outline, only when logged out); right BannerSlider. Mobile: text then slider. Staggered slide-up entrance + floating confetti dots (`.tn-rise` / `.tn-float` in globals.css, off for prefers-reduced-motion).
+  2. Selling points band (white, bottom border; 4 in a row / 2×2 mobile): Home delivery, Wholesale rates, Live stock, {count}+ products. These appear only here.
+  3. Shop by category (tinted) → 4. New arrivals (white) → 5. Visit our store (tinted; address, hours, Call / WhatsApp / Directions; `-mb-16` so the tint meets the footer) → footer.
+  - {count} = `countPublicProducts()` (same filter as the public list), `productCountLabel()` rounds down to the hundred ("1,200+"; exact below 100).
+
+## Banners (lib/banner-presets.ts, lib/banners.ts, app/admin/banners, components/BannerCard.tsx + BannerSlider.tsx)
+- Public slider shows banners with is_active and today (Asia/Kolkata, `todayIST()`) within starts_at..ends_at (nulls open), by sort_order. Card: 12:7 photo, label in preset colour, title, link text + arrow; whole card links to `bannerHref()` (category → /products?category=slug, product → /products/{barcode}, search → /products?q=).
+- 2+: auto-rotate 3.5 s, slide transition, dots, swipe, pause on hover; all slides rendered in one row (equal height). 1: static. 0: default "Browse {count}+ products" card → /products.
+- Admin → Banners: list (thumbnail, title, status Live / Scheduled / Off / Expired via `bannerStatus()`, dates, ▲▼ reorder, active switch, edit, delete — also deletes the photo from Cloudinary). /admin/banners/new and /admin/banners/[id]: upload (required), label, title, link text, link type + value (category dropdown / barcode with lookup / search text), colour presets, Show from / until, active; live preview. A replaced photo is deleted from Cloudinary; unsaved uploads are discarded on replace/cancel.
+- Every banner write revalidates / and /admin/banners.
 
 ## Pages
 Public: `/` · `/products` · `/products/[barcode]` · `/cart` · `/checkout` · `/order-placed/[orderNo]` · `/login`
 Retailer: `/my-orders` · `/my-orders/[orderNo]`
-Owner: `/admin/{orders,orders/[id],products,import,categories,retailers,employees}`
+Owner: `/admin/{orders,orders/[id],products,import,categories,banners,banners/new,banners/[id],retailers,employees}`
 Staff (employee or owner): `/staff/orders` · `/staff/orders/[id]`
 
 @AGENTS.md

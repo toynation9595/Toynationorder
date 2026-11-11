@@ -151,4 +151,22 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Home page hero slider. Live when is_active and today (Asia/Kolkata) is within starts_at..ends_at (nulls = open). */
+export const banners = pgTable("banners", {
+  id: serial("id").primaryKey(),
+  imagePublicId: text("image_public_id").notNull(), // Cloudinary, folder toy-nation/banners
+  label: text("label"),
+  title: text("title").notNull(),
+  linkText: text("link_text").notNull().default(""),
+  linkType: text("link_type", { enum: ["category", "product", "search"] }).notNull(),
+  linkValue: text("link_value").notNull(), // category slug / barcode / search text
+  color: text("color", { enum: ["orange", "pink", "teal", "purple", "amber"] }).notNull().default("purple"),
+  startsAt: date("starts_at"),
+  endsAt: date("ends_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export { ORDER_STATUSES, type OrderStatus } from "../order-statuses";

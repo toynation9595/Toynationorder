@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import { ToyBrick } from "lucide-react";
 import { cldUrl } from "@/lib/images";
 import type { PublicCategory } from "@/lib/catalog";
 
@@ -19,7 +20,7 @@ export default function CategoryTile({ c }: { c: PublicCategory }) {
             className="h-full w-full object-contain p-2 transition duration-200 group-hover:scale-105 group-focus-visible:scale-105"
           />
         ) : (
-          <span className="text-4xl" aria-hidden>🧸</span>
+          <ToyBrick className="h-10 w-10 text-brand/40" aria-hidden />
         )}
       </div>
       <div className="px-1.5 pb-1 pt-2">

@@ -1,3 +1,5 @@
+import { MapPin, MessageCircle, Phone } from "lucide-react";
+
 export const ADDRESS =
   "Rajneel Square, Near Indian Oil Pump, Mumbai-Agra Service Road, Ojhar (MIG), Nashik, Maharashtra 422207";
 
@@ -17,16 +19,16 @@ export default function ContactButtons({ tone = "light", className = "" }: { ton
     <div className={`flex flex-wrap gap-2 ${className}`}>
       {PHONE && (
         <a href={`tel:+91${PHONE}`} className={`${base} ${tone === "light" ? "bg-brand text-white hover:bg-brand-dark" : "bg-white text-brand hover:bg-brand-light"}`}>
-          📞 Call
+          <Phone className="h-4 w-4" aria-hidden /> Call
         </a>
       )}
       {WHATSAPP && (
         <a href={`https://wa.me/91${WHATSAPP}`} target="_blank" rel="noopener noreferrer" className={`${base} bg-[#25D366] text-white hover:bg-[#1ebe5b]`}>
-          WhatsApp
+          <MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp
         </a>
       )}
       <a href={DIRECTIONS} target="_blank" rel="noopener noreferrer" className={`${base} ${secondary}`}>
-        📍 Get directions
+        <MapPin className="h-4 w-4" aria-hidden /> Get directions
       </a>
     </div>
   );

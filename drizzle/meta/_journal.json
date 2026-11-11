@@ -78,6 +78,13 @@
       "when": 1792089663932,
       "tag": "0010_image_format",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794397152629,
+      "tag": "0011_banners",
+      "breakpoints": true
     }
   ]
 }

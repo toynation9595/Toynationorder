@@ -185,6 +185,16 @@ export async function listProducts(opts: { q?: string; categoryId?: number; page
   return { products: rows.map((r) => r.product), total, pages: Math.max(1, Math.ceil(total / pageSize)), priceType };
 }
 
+/** Number of products the public site lists (visible, available, active or no category). */
+export async function countPublicProducts(): Promise<number> {
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
+    .where(listable);
+  return Number(total) || 0;
+}
+
 /** A few products for the home page, newest arrivals with images first. */
 export async function featuredProducts(limit = 8): Promise<PublicProduct[]> {
   const rows = await queryPublicProducts({
