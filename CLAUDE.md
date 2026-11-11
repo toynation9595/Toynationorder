@@ -93,7 +93,7 @@ Source: stock report .xlsx from the ERP (single sheet).
 
 ## Design
 - Professional, playful-but-clean toy brand. White dominant background.
-- Logo: `/public/logo.png` is a PHOTO of the signboard (purple background, white confetti "TN" + "Toy Nation"). Use it as-is inside a rounded tile in the header and hero; do not place it on white without the tile.
+- Logos: `/public/logo-transparent.png` (TN + "Toy Nation", transparent) sits directly on the purple hero, 180px wide, no tile/border/shadow (hidden on mobile). `/public/logo-tn-mark.png` (TN mark, transparent, ~36px tall) sits directly on purple in the site header and footer, followed by the "Toy Nation" text. `/public/logo.png` (signboard photo, purple background) is still used inside a rounded tile (components/LogoTile.tsx) on the login card and the admin/staff headers; never place it on white without the tile.
 - Palette (Tailwind theme tokens): primary purple #5B3FA0 (dark #3D2C6E), confetti accents orange #F07A2E, pink #E8488A, teal #2BB5BE, yellow #F5C518. Purple for header, buttons and hero; accents sparingly for badges, category tiles and small confetti dots.
 - Fonts via next/font: Fredoka (headings), Inter (body).
 - Rounded cards, soft shadows, generous spacing. Mobile-first (most users order on phones); works well on desktop too.

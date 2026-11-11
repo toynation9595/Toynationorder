@@ -1,5 +1,4 @@
 import Link from "next/link";
-import LogoTile from "@/components/LogoTile";
 import ProductCard from "@/components/ProductCard";
 import CategoryTile from "@/components/CategoryTile";
 import ContactButtons, { ADDRESS, BUSINESS_HOURS } from "@/components/ContactButtons";
@@ -29,7 +28,9 @@ export default async function HomePage() {
         <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-8 px-4 pb-14 pt-10 text-center md:flex-row md:py-20 md:text-left">
           {/* Mobile: the logo is already in the header, so the headline comes first. */}
           <div className="hidden shrink-0 md:block">
-            <LogoTile size={180} className="rounded-3xl shadow-2xl ring-4 ring-white/20" />
+            {/* Transparent logo straight on the purple hero; 180px wide keeps the search bar aligned. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-transparent.png" alt="Toy Nation" width={180} height={144} className="h-auto w-[180px] object-contain" />
           </div>
           <div className="max-w-xl">
             <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Toys & seasonal goods, wholesale.</h1>

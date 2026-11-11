@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import LogoTile from "./LogoTile";
 import CartLink from "./CartLink";
 import MyOrdersButton from "./MyOrdersButton";
 import LogoutButton from "./LogoutButton";
@@ -11,8 +10,9 @@ export default async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 bg-brand text-white shadow-md">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 max-[379px]:gap-2 max-[379px]:px-3">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <LogoTile size={42} />
+        <Link href="/" aria-label="Toy Nation home" className="flex shrink-0 items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-tn-mark.png" alt="" width={59} height={36} className="h-9 w-auto object-contain" />
           <span className="hidden font-heading text-xl font-semibold sm:inline">Toy Nation</span>
         </Link>
         <nav className="ml-auto flex items-center gap-1 whitespace-nowrap text-sm font-medium max-[379px]:gap-0">

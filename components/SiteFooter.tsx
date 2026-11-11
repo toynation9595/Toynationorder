@@ -1,5 +1,4 @@
 import Link from "next/link";
-import LogoTile from "./LogoTile";
 import ContactButtons, { ADDRESS, BUSINESS_HOURS } from "./ContactButtons";
 
 export { ADDRESS };
@@ -9,7 +8,8 @@ export default function SiteFooter() {
     <footer className="mt-16 bg-brand-dark text-white/80">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-3">
         <div className="flex items-start gap-3">
-          <LogoTile size={52} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-tn-mark.png" alt="" width={59} height={36} className="mt-0.5 h-9 w-auto object-contain" />
           <div>
             <div className="font-heading text-lg font-semibold text-white">Toy Nation</div>
             <p className="text-sm">Toys & seasonal wholesale</p>
